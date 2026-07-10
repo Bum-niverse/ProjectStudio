@@ -23,6 +23,7 @@ type LayoutDensity = "default" | "compact";
 type FeatureNode = Node<FeatureNodeData>;
 const nodeTypes = { feature: FeatureNodeCard };
 const MAGNET_DISTANCE = 34;
+const FEATURE_NODE_LAYOUT_VERSION="wide-v1";
 
 function magnetize(value: number, candidates: number[]): number {
   const closest = candidates.reduce((best, candidate) => Math.abs(candidate - value) < Math.abs(best - value) ? candidate : best, value);
@@ -72,7 +73,7 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutD
       const y = children.length === 0
         ? 35 + nextLeafRow++ * (density==="compact"?54:74)
         : children.map((child) => placeTreeNode(child, depth + 1)).reduce((sum, value) => sum + value, 0) / children.length;
-      positions.set(feature.id, { x: 30 + depth * (density==="compact"?235:270), y });
+      positions.set(feature.id, { x: 30 + depth * (density==="compact"?315:350), y });
       return y;
     };
     placeTreeNode(root, 0);
@@ -83,7 +84,7 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutD
     children.forEach((child) => {
       if (mode === "mindmap") {
         const angle = mindMapAngles.get(child.id) ?? 0;
-        const radius = depth * (density==="compact"?190:230);
+        const radius = depth * (density==="compact"?270:320);
         positions.set(child.id, {
           x: 430 + Math.cos(angle) * radius,
           y: 260 + Math.sin(angle) * radius,
@@ -124,11 +125,8 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
       repository.listPositions(projectId),
     ]).then(([storedFeatures, positions]) => {
       setFeatures(storedFeatures);
-      setPositionsByMode({
-        tree: Object.fromEntries(positions.filter((item) => item.viewMode === "tree").map((item) => [item.featureId, { x: item.positionX, y: item.positionY }])),
-        mindmap: Object.fromEntries(positions.filter((item) => item.viewMode === "mindmap").map((item) => [item.featureId, { x: item.positionX, y: item.positionY }])),
-      });
-      setPersistenceMessage("SQLite와 동기화됨");
+      const layoutKey=`projectstudio:${projectId}:feature-node-layout`;const shouldUpgrade=localStorage.getItem(layoutKey)!==FEATURE_NODE_LAYOUT_VERSION;
+      if(shouldUpgrade){const tree=layoutFeatures(storedFeatures,"tree");const mindmap=layoutFeatures(storedFeatures,"mindmap");setPositionsByMode({tree:Object.fromEntries(tree.map(node=>[node.id,node.position])),mindmap:Object.fromEntries(mindmap.map(node=>[node.id,node.position]))});void Promise.all([...tree.map(node=>repository.savePosition({projectId,featureId:node.id,viewMode:"tree",positionX:node.position.x,positionY:node.position.y})),...mindmap.map(node=>repository.savePosition({projectId,featureId:node.id,viewMode:"mindmap",positionX:node.position.x,positionY:node.position.y}))]).then(()=>localStorage.setItem(layoutKey,FEATURE_NODE_LAYOUT_VERSION));setPersistenceMessage("넓은 노드 기준으로 정렬했습니다.");}else{setPositionsByMode({tree:Object.fromEntries(positions.filter(item=>item.viewMode==="tree").map(item=>[item.featureId,{x:item.positionX,y:item.positionY}])),mindmap:Object.fromEntries(positions.filter(item=>item.viewMode==="mindmap").map(item=>[item.featureId,{x:item.positionX,y:item.positionY}]))});setPersistenceMessage("SQLite와 동기화됨");}
     }).catch(() => setPersistenceMessage("기능명세 저장소를 연결하지 못했습니다."));
   }, [generatedFeatures, projectId, repository, sourceDocumentId]);
   const nodes = defaultNodes.map((node) => ({ ...node, selected:node.id===activeNodeId, position: positionsByMode[mapMode][node.id] ?? node.position, data: { ...node.data, onSelect:(feature:FeatureSpec)=>setActiveNodeId(current=>current===feature.id?undefined:feature.id), onAdd: handleAddFeature, onEdit: (feature:FeatureSpec)=>setSelectedFeatureId(feature.id), onDelete: handleDeleteFeature } }));
@@ -164,7 +162,7 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
 
   async function handleAddFeature(parent:FeatureSpec){
     const id=`${projectId}-feature-${crypto.randomUUID()}`;const feature:FeatureSpec={id,parentId:parent.id,title:"새 기능",description:"새 기능의 목적과 사용자 흐름을 작성해 주세요.",status:"planned",priority:parent.priority,role:parent.role,sortOrder:Math.max(0,...features.map(item=>item.sortOrder))+1,acceptanceCriteria:[],colorKey:parent.colorKey??"cyan"};
-    try{const updated=await repository.createFeature(projectId,feature);setFeatures(updated.length>1?updated:[...features,feature]);const parentPosition=nodes.find(node=>node.id===parent.id)?.position??{x:0,y:0};const position={x:parentPosition.x+270,y:parentPosition.y+80};setPositionsByMode(current=>({...current,[mapMode]:{...current[mapMode],[id]:position}}));await repository.savePosition({projectId,featureId:id,viewMode:mapMode,positionX:position.x,positionY:position.y});setActiveNodeId(id);setSelectedFeatureId(id);setPersistenceMessage("새 하위 기능을 추가했습니다.");}catch(error){setPersistenceMessage(error instanceof Error?error.message:"기능을 추가하지 못했습니다.");}
+    try{const updated=await repository.createFeature(projectId,feature);setFeatures(updated.length>1?updated:[...features,feature]);const parentPosition=nodes.find(node=>node.id===parent.id)?.position??{x:0,y:0};const position={x:parentPosition.x+350,y:parentPosition.y+80};setPositionsByMode(current=>({...current,[mapMode]:{...current[mapMode],[id]:position}}));await repository.savePosition({projectId,featureId:id,viewMode:mapMode,positionX:position.x,positionY:position.y});setActiveNodeId(id);setSelectedFeatureId(id);setPersistenceMessage("새 하위 기능을 추가했습니다.");}catch(error){setPersistenceMessage(error instanceof Error?error.message:"기능을 추가하지 못했습니다.");}
   }
 
   async function handleDeleteFeature(feature:FeatureSpec){
