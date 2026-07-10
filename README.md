@@ -44,4 +44,6 @@ pnpm tauri dev
 
 5단계 와이어프레임은 유저플로우에서 생성 후보 페이지를 모아 대주제별 접이식 목록으로 보여줍니다. 필요한 페이지와 데스크톱·모바일 디바이스를 고르면 외부 전송 없는 로컬 프리뷰로 화면 블록 초안을 만들고 페이지별 결과를 넘겨 볼 수 있습니다. Claude·Codex·Antigravity·Ollama 선택지는 로컬 연결 상태를 확인하며 실제 외부 CLI 호출과 SQLite 리비전 저장은 다음 구현 범위입니다.
 
+6단계 내보내기는 프로젝트 개요, PRD, 기능명세·수용 기준과 유저플로우를 CSV 묶음, A4 PDF 보고서와 LLM용 Markdown으로 정리합니다. Codex·Claude·Antigravity·범용 LLM용 실행 프롬프트를 함께 만들며 모든 파일은 사용자가 지정한 로컬 폴더의 `ProjectStudio-Exports` 아래에 저장됩니다.
+
 Rust 버전과 필수 컴포넌트는 `rust-toolchain.toml`에 고정되어 있습니다. Tauri 실행 시 SQLite 데이터베이스는 운영체제의 앱 데이터 디렉터리에 생성됩니다.

@@ -2,6 +2,7 @@ mod codex_sync;
 mod developer_tools;
 mod feature_change_proposals;
 mod feature_repository;
+mod project_export;
 mod project_repository;
 mod user_flow_repository;
 
@@ -49,6 +50,7 @@ pub fn run() {
             project_repository::save_project_with_initial_prd,
             project_repository::list_projects,
             project_repository::save_prd_revision,
+            project_export::export_project_package,
             feature_repository::initialize_feature_spec,
             feature_repository::save_feature_position,
             feature_repository::list_feature_positions,
