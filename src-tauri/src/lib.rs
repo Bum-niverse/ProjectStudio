@@ -1,3 +1,4 @@
+mod app_environment;
 mod codex_sync;
 mod codex_wireframe;
 mod developer_tools;
@@ -55,6 +56,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             exit_projectstudio,
+            app_environment::get_app_environment,
             project_repository::save_project_with_initial_prd,
             project_repository::list_projects,
             project_repository::save_prd_revision,

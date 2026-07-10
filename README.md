@@ -2,7 +2,7 @@
 
 개인 프로젝트의 아이디어를 PRD, 기능명세, 유저플로우와 와이어프레임으로 발전시키고 실제 코드·커밋·테스트·완료 상태까지 추적하는 로컬 우선 데스크톱 프로그램입니다.
 
-앱을 열면 GitHub 로그인 잠금 화면이 먼저 표시됩니다. 현재 개인 작업대는 `Bum-niverse` GitHub 사용자 ID만 허용하며 로그인 전에는 로컬 프로젝트 데이터베이스를 읽지 않습니다. 인증 토큰은 ProjectStudio가 저장하지 않고 GitHub CLI의 Windows keyring 세션을 사용합니다. 소유자 로그인 후 개발자 모드를 켜면 Tauri 개발 서버에서 프론트엔드 변경사항이 HMR로 즉시 반영됩니다.
+앱을 열면 GitHub 로그인 잠금 화면이 먼저 표시됩니다. GitHub CLI로 인증된 사용자는 각자 자신의 Windows 계정에 저장된 로컬 작업대를 열 수 있으며 로그인 전에는 프로젝트 데이터베이스를 읽지 않습니다. 인증 토큰은 ProjectStudio가 저장하지 않고 GitHub CLI의 Windows keyring 세션을 사용합니다. `Bum-niverse` 소유자 계정에만 개발자 모드가 표시됩니다.
 
 첫 실제 사용 프로젝트는 Globeat입니다.
 
@@ -25,6 +25,8 @@
 - [제품 초안](docs/product-brief.md)
 - [Codex 동기화 계약](docs/codex-sync-contract.md)
 - [UI/UX 설계 및 검수 기준](docs/ui-ux-guidelines.md)
+- [로컬 데이터와 개인정보](docs/privacy.md)
+- [Windows 베타 배포 및 업데이트](docs/distribution.md)
 
 ## 개발 명령
 
@@ -54,3 +56,7 @@ Codex는 각 화면 블록의 캔버스 좌표와 크기까지 반환합니다. 
 6단계 내보내기는 프로젝트 개요, PRD, 기능명세·수용 기준과 유저플로우를 CSV 묶음, A4 PDF 보고서와 LLM용 Markdown으로 정리합니다. Codex·Claude·Antigravity·범용 LLM용 실행 프롬프트를 함께 만들며 모든 파일은 사용자가 지정한 로컬 폴더의 `ProjectStudio-Exports` 아래에 저장됩니다.
 
 Rust 버전과 필수 컴포넌트는 `rust-toolchain.toml`에 고정되어 있습니다. Tauri 실행 시 SQLite 데이터베이스는 운영체제의 앱 데이터 디렉터리에 생성됩니다.
+
+## 지인 공유용 Windows 베타
+
+`pnpm tauri build`로 NSIS `.exe`와 MSI `.msi` 설치 파일을 생성합니다. 설치형 사용자는 Node.js, pnpm이나 Rust가 필요하지 않지만 GitHub 로그인 잠금을 사용하려면 [GitHub CLI](https://cli.github.com/) 설치와 로그인이 필요합니다. Codex·Claude·Antigravity·Ollama는 선택 기능이며 설치되어 있지 않아도 프로젝트, PRD, 기능명세, 유저플로우, 로컬 와이어프레임과 내보내기를 사용할 수 있습니다.

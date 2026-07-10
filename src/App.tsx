@@ -63,9 +63,9 @@ export default function App() {
       .finally(() => setIsLoading(false));
   }, [githubUser,service]);
 
-  async function handleGithubLogin(){setIsAuthenticating(true);setAuthMessage(undefined);try{if(!isTauri())throw new Error("GitHub 로그인은 데스크톱 앱에서 사용할 수 있습니다.");const user=await invoke<GithubUser>("get_github_session");setIsLoading(true);setGithubUser(user);setAuthMessage(undefined);}catch(error){setAuthMessage(error instanceof Error?error.message:String(error));}finally{setIsAuthenticating(false);}}
+  async function handleGithubLogin(){setIsAuthenticating(true);setAuthMessage(undefined);try{if(!isTauri())throw new Error("GitHub 로그인은 데스크톱 앱에서 사용할 수 있습니다.");const user=await invoke<GithubUser>("get_github_session");if(!user.isOwner){setIsDeveloperMode(false);localStorage.setItem("projectstudio:developer-mode","false");}setIsLoading(true);setGithubUser(user);setAuthMessage(undefined);}catch(error){setAuthMessage(error instanceof Error?error.message:String(error));}finally{setIsAuthenticating(false);}}
   async function handleStartGithubLogin(){try{if(!isTauri())throw new Error("GitHub 로그인은 데스크톱 앱에서 사용할 수 있습니다.");await invoke("start_github_login");setAuthMessage("열린 GitHub CLI 창에서 로그인을 완료한 뒤 ‘GitHub로 로그인’을 다시 눌러 주세요.");}catch(error){setAuthMessage(error instanceof Error?error.message:String(error));}}
-  function handleDeveloperMode(){const next=!isDeveloperMode;setIsDeveloperMode(next);localStorage.setItem("projectstudio:developer-mode",String(next));}
+  function handleDeveloperMode(){if(!githubUser?.isOwner)return;const next=!isDeveloperMode;setIsDeveloperMode(next);localStorage.setItem("projectstudio:developer-mode",String(next));}
   function handleLock(){setGithubUser(undefined);setProjects([]);setSelectedProjectId(undefined);setPage("project");setIsLoading(false);}
   async function handleComplete(){setCompletionError(undefined);try{if(isTauri()){await invoke("exit_projectstudio");return;}window.close();if(!window.closed)setCompletionError("브라우저 미리보기에서는 창을 자동으로 닫을 수 없습니다.");}catch(error){setCompletionError(error instanceof Error?error.message:"프로그램을 종료하지 못했습니다. 다시 시도해 주세요.");}}
 
@@ -115,7 +115,7 @@ export default function App() {
       <header className="topbar">
         <div className="brand-mark">PS</div>
         <div><p className="eyebrow">LOCAL PRODUCT WORKSPACE</p><h1>ProjectStudio</h1></div>
-        <div className="topbar-actions"><span className="github-user-badge">@{githubUser.login}</span>{githubUser.isOwner&&<button className={isDeveloperMode?"developer-mode-toggle active":"developer-mode-toggle"} onClick={handleDeveloperMode} type="button">개발자 모드 {isDeveloperMode?"ON":"OFF"}</button>}<span className="mode-badge">{isDeveloperMode?(window.location.port==="1420"?"실시간 반영 연결됨":"개발 빌드에서 실시간 반영"):"외부 전송 없음"}</span><button onClick={handleOpenSettings} type="button" aria-label="설정 열기">⚙ 설정</button><button onClick={handleLock} type="button">잠금</button></div>
+        <div className="topbar-actions"><span className="github-user-badge">@{githubUser.login}</span>{githubUser.isOwner&&<button className={isDeveloperMode?"developer-mode-toggle active":"developer-mode-toggle"} onClick={handleDeveloperMode} type="button">개발자 모드 {isDeveloperMode?"ON":"OFF"}</button>}<span className="mode-badge">{githubUser.isOwner&&isDeveloperMode?(window.location.port==="1420"?"실시간 반영 연결됨":"개발 빌드에서 실시간 반영"):"로컬 저장 · 외부 전송 없음"}</span><button onClick={handleOpenSettings} type="button" aria-label="설정 열기">⚙ 설정</button><button onClick={handleLock} type="button">잠금</button></div>
       </header>
 
       {page !== "settings" && <nav className="page-progress" aria-label="제품 개발 단계">

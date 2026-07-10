@@ -37,17 +37,12 @@ pub async fn get_github_session() -> Result<GithubUser, String> {
         .as_u64()
         .ok_or_else(|| "GitHub 사용자 ID가 없습니다.".to_owned())?;
     let login = value["login"].as_str().unwrap_or_default().to_owned();
-    if id != OWNER_GITHUB_ID {
-        return Err(format!(
-            "{login} 계정은 이 개인 작업대에 접근할 수 없습니다."
-        ));
-    }
     Ok(GithubUser {
         id,
         login,
         name: value["name"].as_str().map(str::to_owned),
         avatar_url: value["avatar_url"].as_str().unwrap_or_default().to_owned(),
-        is_owner: true,
+        is_owner: id == OWNER_GITHUB_ID,
     })
 }
 
@@ -67,5 +62,10 @@ mod tests {
     #[test]
     fn owner_id_is_stable() {
         assert_eq!(OWNER_GITHUB_ID, 128_395_576);
+    }
+
+    #[test]
+    fn non_owner_accounts_are_distinct_from_owner() {
+        assert_ne!(OWNER_GITHUB_ID, 1);
     }
 }
