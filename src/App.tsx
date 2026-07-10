@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { createProjectService } from "./application/createProjectService";
 import { ProjectValidationError, type ProjectValidationErrors, type ProjectWithPrd } from "./domain/project";
 import { FeatureMap } from "./FeatureMap";
@@ -60,6 +61,7 @@ export default function App() {
   async function handleStartGithubLogin(){try{if(!isTauri())throw new Error("GitHub 로그인은 데스크톱 앱에서 사용할 수 있습니다.");await invoke("start_github_login");setAuthMessage("열린 GitHub CLI 창에서 로그인을 완료한 뒤 ‘GitHub로 로그인’을 다시 눌러 주세요.");}catch(error){setAuthMessage(error instanceof Error?error.message:String(error));}}
   function handleDeveloperMode(){const next=!isDeveloperMode;setIsDeveloperMode(next);localStorage.setItem("projectstudio:developer-mode",String(next));}
   function handleLock(){setGithubUser(undefined);setProjects([]);setSelectedProjectId(undefined);setPage("project");setIsLoading(false);}
+  async function handleComplete(){if(isTauri()){await getCurrentWindow().close();return;}window.close();}
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -173,7 +175,7 @@ export default function App() {
       )}
       {page === "user-flow" && selectedProject && <section className="full-page user-flow-full-page"><UserFlowPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("features")} type="button">이전: 기능명세</button><button onClick={()=>setPage("wireframe")} type="button">다음: 와이어프레임</button></div></section>}
       {page === "wireframe" && selectedProject && <section className="full-page wireframe-full-page"><WireframePage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("user-flow")} type="button">이전: 유저플로우</button><button onClick={()=>setPage("export")} type="button">다음: 내보내기</button></div></section>}
-      {page === "export" && selectedProject && <section className="full-page export-full-page"><ExportPage projectId={selectedProject.project.id} projectName={selectedProject.project.name}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("wireframe")} type="button">이전: 와이어프레임</button><button disabled type="button">완료</button></div></section>}
+      {page === "export" && selectedProject && <section className="full-page export-full-page"><ExportPage projectId={selectedProject.project.id} projectName={selectedProject.project.name}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("wireframe")} type="button">이전: 와이어프레임</button><button onClick={()=>void handleComplete()} type="button">완료 및 종료</button></div></section>}
     </main>
   );
 }
