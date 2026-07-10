@@ -14,6 +14,7 @@ import { WireframePage } from "./WireframePage";
 import { ExportPage } from "./ExportPage";
 import { LoginPage } from "./LoginPage";
 import { createDevelopmentPrdValues } from "./adapters/developmentPrdGenerator";
+import { applyFont, loadFont, type FontId } from "./font";
 
 interface GithubUser{id:number;login:string;name?:string;avatarUrl:string;isOwner:boolean}
 
@@ -34,6 +35,7 @@ export default function App() {
   const [page, setPage] = useState<AppPage>("project");
   const [returnPage, setReturnPage] = useState<AppPage>("project");
   const [theme, setTheme] = useState<ThemeId>(() => loadTheme());
+  const [font,setFont]=useState<FontId>(()=>loadFont());
   const [projects, setProjects] = useState<ProjectWithPrd[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>();
   const [name, setName] = useState("");
@@ -52,6 +54,7 @@ export default function App() {
   const activeStageIndex = page === "project" ? 0 : page === "prd" ? 1 : page === "features" ? 2 : page === "user-flow" ? 3 : page === "wireframe" ? 4 : page === "export" ? 5 : -1;
 
   useEffect(() => { applyTheme(theme); }, [theme]);
+  useEffect(()=>{applyFont(font);},[font]);
 
   useEffect(() => {
     if(!githubUser)return;
@@ -129,7 +132,7 @@ export default function App() {
         ))}
       </nav>}
 
-      {page === "settings" && <SettingsPage theme={theme} projectId={selectedProject?.project.id} onThemeChange={setTheme} onClose={() => setPage(returnPage === "settings" ? "project" : returnPage)} />}
+      {page === "settings" && <SettingsPage theme={theme} font={font} projectId={selectedProject?.project.id} onThemeChange={setTheme} onFontChange={setFont} onClose={() => setPage(returnPage === "settings" ? "project" : returnPage)} />}
 
       {page === "project" && (
         <section className="full-page project-create-page">
