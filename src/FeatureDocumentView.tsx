@@ -46,8 +46,8 @@ export function FeatureEditor({ feature, onSave }: { feature: FeatureSpec; onSav
 }
 
 export function FeatureDocumentView({ features, onSave }: FeatureDocumentViewProps) {
-  const root = features.find((feature) => !feature.parentId);
-  const requirements = useMemo(() => features.filter((feature) => feature.parentId === root?.id), [features, root?.id]);
+  const root = features.filter(feature=>!feature.parentId).sort((a,b)=>a.sortOrder-b.sortOrder)[0];
+  const requirements = useMemo(() => features.filter((feature) => feature.parentId === root?.id||(!feature.parentId&&feature.id!==root?.id)), [features, root?.id]);
   const [requirementId, setRequirementId] = useState(requirements[0]?.id);
   const details = features.filter((feature) => feature.parentId === requirementId);
   const [featureId, setFeatureId] = useState(details[0]?.id ?? requirementId);

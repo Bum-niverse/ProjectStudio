@@ -128,6 +128,7 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
   const [selectedFeatureId, setSelectedFeatureId] = useState<string>();
   const [activeNodeId, setActiveNodeId] = useState<string>();
   const [isProposalPanelOpen, setIsProposalPanelOpen] = useState(false);
+  const[edgeMenu,setEdgeMenu]=useState<{id:string;target:string;x:number;y:number}>();
 
   useEffect(() => {
     void Promise.all([
@@ -196,6 +197,8 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
     }
   }
 
+  async function handleDeleteEdge(){if(!edgeMenu)return;try{const updated=await repository.disconnectFeature(projectId,edgeMenu.target);setFeatures(updated);setEdgeMenu(undefined);setPersistenceMessage("연결선을 삭제했습니다. 하위 문서는 독립된 요구사항으로 유지됩니다.");}catch(error){setPersistenceMessage(error instanceof Error?error.message:"연결선을 삭제하지 못했습니다.");}}
+
   function handleResetLayout(density:LayoutDensity) {
     setLayoutDensity(density);const layout=layoutFeatures(features,mapMode,density);
     const positions = Object.fromEntries(layout.map((node) => [node.id, node.position]));
@@ -219,11 +222,12 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
         </div>
       </div>
       {mode === "document" ? <FeatureDocumentView features={features} onSave={handleSaveFeature} /> : <div className="feature-canvas" data-view-mode={mode}>
-        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.08, duration: 350, maxZoom: 0.9 }} minZoom={0.12} maxZoom={1.8} panOnScroll proOptions={{hideAttribution:true}}>
+        <ReactFlow nodes={nodes} edges={edges.map(edge=>({...edge,selected:edge.id===edgeMenu?.id}))} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onEdgeClick={(event,edge)=>{event.stopPropagation();const canvas=(event.currentTarget as Element).closest(".feature-canvas")?.getBoundingClientRect();if(canvas)setEdgeMenu({id:edge.id,target:edge.target,x:event.clientX-canvas.left,y:event.clientY-canvas.top});}} onPaneClick={()=>setEdgeMenu(undefined)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.08, duration: 350, maxZoom: 0.9 }} minZoom={0.12} maxZoom={1.8} panOnScroll proOptions={{hideAttribution:true}}>
           <Background color="var(--theme-border)" gap={24} size={1} />
           <Controls showInteractive={false} />
           <Panel position="bottom-right"><div className="canvas-layout-controls"><button onClick={()=>handleResetLayout("default")} type="button">기본 정렬</button><button onClick={()=>handleResetLayout("compact")} type="button">좁은 정렬</button></div></Panel>
         </ReactFlow>
+        {edgeMenu&&<div className="edge-delete-toolbar" style={{left:edgeMenu.x,top:edgeMenu.y}}><button aria-label="선택한 기능 연결선 삭제" onClick={()=>void handleDeleteEdge()} title="연결선 삭제" type="button">🗑</button></div>}
         {selectedFeature && <aside className="node-document-panel"><button className="panel-close" onClick={() => setSelectedFeatureId(undefined)} type="button">×</button><FeatureEditor key={selectedFeature.id} feature={selectedFeature} onSave={handleSaveFeature} /></aside>}
       </div>}
       <FeatureProposalPanel projectId={projectId} features={features} isOpen={isProposalPanelOpen} onClose={() => setIsProposalPanelOpen(false)} onAccepted={handleAcceptedProposal} />

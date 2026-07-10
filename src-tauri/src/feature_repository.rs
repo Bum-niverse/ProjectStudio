@@ -64,6 +64,14 @@ pub struct ReparentFeatureInput {
     updated_at: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DisconnectFeatureInput {
+    project_id: String,
+    feature_id: String,
+    updated_at: String,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FeaturePosition {
@@ -312,6 +320,21 @@ pub async fn reparent_feature(
         .execute(&mut connection).await.map_err(|error| format!("기능 관계를 저장하지 못했습니다: {error}"))?;
     if result.rows_affected() != 1 {
         return Err("루트 기능은 다른 기능 아래로 이동할 수 없습니다.".to_owned());
+    }
+    list_features(&mut connection, &input.project_id).await
+}
+
+#[tauri::command]
+pub async fn disconnect_feature(
+    app: AppHandle,
+    input: DisconnectFeatureInput,
+) -> Result<Vec<FeatureSpec>, String> {
+    let mut connection = open_database(&app).await?;
+    let result = sqlx::query("UPDATE features SET parent_feature_id = NULL, updated_at = ? WHERE id = ? AND project_id = ? AND parent_feature_id IS NOT NULL")
+        .bind(&input.updated_at).bind(&input.feature_id).bind(&input.project_id)
+        .execute(&mut connection).await.map_err(|error| format!("기능 연결을 삭제하지 못했습니다: {error}"))?;
+    if result.rows_affected() != 1 {
+        return Err("삭제할 기능 연결을 찾지 못했습니다.".to_owned());
     }
     list_features(&mut connection, &input.project_id).await
 }

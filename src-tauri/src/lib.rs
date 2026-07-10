@@ -58,6 +58,7 @@ pub fn run() {
             feature_repository::list_feature_positions,
             feature_repository::update_feature,
             feature_repository::reparent_feature,
+            feature_repository::disconnect_feature,
             feature_repository::create_feature,
             feature_repository::delete_feature,
             feature_change_proposals::create_feature_change_proposal,
