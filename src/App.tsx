@@ -1,15 +1,26 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createProjectService } from "./application/createProjectService";
 import { ProjectValidationError, type ProjectValidationErrors, type ProjectWithPrd } from "./domain/project";
-import { PrdEditor } from "./PrdEditor";
 import { FeatureMap } from "./FeatureMap";
+import { PrdEditor } from "./PrdEditor";
 import "./styles.css";
 
-type WorkspaceStage = "prd" | "features" | "user-flow" | "wireframe" | "development";
+type AppPage = "project" | "prd" | "features";
+
+const STAGES = [
+  { id: "project", label: "프로젝트" },
+  { id: "prd", label: "PRD" },
+  { id: "features", label: "기능명세" },
+  { id: "user-flow", label: "유저플로우" },
+  { id: "wireframe", label: "와이어프레임" },
+  { id: "development", label: "개발" },
+] as const;
 
 export default function App() {
   const service = useMemo(() => createProjectService(), []);
+  const [page, setPage] = useState<AppPage>("project");
   const [projects, setProjects] = useState<ProjectWithPrd[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>();
   const [name, setName] = useState("");
   const [idea, setIdea] = useState("");
   const [errors, setErrors] = useState<ProjectValidationErrors>({});
@@ -17,16 +28,13 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string>();
   const [loadError, setLoadError] = useState<string>();
-  const [stageByProject, setStageByProject] = useState<Record<string, WorkspaceStage>>({});
-  const currentProgressIndex = projects.length === 0
-    ? 0
-    : Object.values(stageByProject).includes("features") ? 2 : 1;
+
+  const selectedProject = projects.find(({ project }) => project.id === selectedProjectId);
+  const activeStageIndex = page === "project" ? 0 : page === "prd" ? 1 : 2;
 
   useEffect(() => {
-    void service
-      .listProjects()
-      .then(setProjects)
-      .catch(() => setLoadError("저장된 프로젝트를 불러오지 못했습니다. 앱을 다시 시작해 주세요."))
+    void service.listProjects().then(setProjects)
+      .catch(() => setLoadError("저장된 프로젝트를 불러오지 못했습니다."))
       .finally(() => setIsLoading(false));
   }, [service]);
 
@@ -35,134 +43,106 @@ export default function App() {
     setErrors({});
     setSaveError(undefined);
     setIsSaving(true);
-
     try {
       const created = await service.createProject({ name, idea });
       setProjects((current) => [created, ...current]);
-      setStageByProject((current) => ({ ...current, [created.project.id]: "prd" }));
+      setSelectedProjectId(created.project.id);
       setName("");
       setIdea("");
+      setPage("prd");
     } catch (error) {
       if (error instanceof ProjectValidationError) setErrors(error.fields);
-      else setSaveError("저장하지 못했습니다. 입력 내용은 유지됩니다. 다시 시도해 주세요.");
+      else setSaveError("프로젝트를 만들지 못했습니다. 입력 내용은 유지됩니다.");
     } finally {
       setIsSaving(false);
     }
   }
 
-  async function handleSavePrd(projectId: string, contentMarkdown: string) {
-    const current = projects.find(({ project }) => project.id === projectId);
-    if (!current) throw new Error("프로젝트를 찾을 수 없습니다.");
-    const prd = await service.savePrdRevision(current.prd, contentMarkdown);
-    setProjects((items) =>
-      items.map((item) => (item.project.id === projectId ? { ...item, prd } : item)),
-    );
+  function handleOpenProject(projectId: string) {
+    setSelectedProjectId(projectId);
+    setPage("prd");
+  }
+
+  async function handleSavePrd(contentMarkdown: string) {
+    if (!selectedProject) throw new Error("프로젝트를 찾을 수 없습니다.");
+    const prd = await service.savePrdRevision(selectedProject.prd, contentMarkdown);
+    setProjects((items) => items.map((item) =>
+      item.project.id === selectedProject.project.id ? { ...item, prd } : item,
+    ));
+  }
+
+  function handleNavigate(target: AppPage) {
+    if (target !== "project" && !selectedProject) return;
+    setPage(target);
   }
 
   return (
-    <main className="app-shell">
+    <main className="app-shell page-shell">
       <header className="topbar">
         <div className="brand-mark">PS</div>
-        <div>
-          <p className="eyebrow">LOCAL PRODUCT WORKSPACE</p>
-          <h1>ProjectStudio</h1>
-        </div>
+        <div><p className="eyebrow">LOCAL PRODUCT WORKSPACE</p><h1>ProjectStudio</h1></div>
         <span className="mode-badge">개발 모드 · 외부 전송 없음</span>
       </header>
 
-      <section className="hero">
-        <div>
-          <p className="eyebrow">IDEA → PRD → DELIVERY</p>
-          <h2>아이디어를 실행 가능한 제품 기록으로 바꾸세요.</h2>
-          <p>기획 문서와 코드, 커밋, 테스트가 어디까지 이어졌는지 한곳에서 추적합니다.</p>
-        </div>
-        <div className="progress-track" aria-label="제품 개발 단계">
-          {["프로젝트", "PRD", "기능명세", "유저플로우", "와이어프레임", "개발"].map((step, index) => (
-            <div className={index === currentProgressIndex ? "step active" : "step"} key={step}>
-              <span>{index + 1}</span>{step}
-            </div>
-          ))}
-        </div>
-      </section>
+      <nav className="page-progress" aria-label="제품 개발 단계">
+        {STAGES.map((stage, index) => (
+          <button
+            className={index === activeStageIndex ? "active" : index < activeStageIndex ? "complete" : ""}
+            disabled={index > 2 || (index > 0 && !selectedProject)}
+            key={stage.id}
+            onClick={() => index <= 2 && handleNavigate(stage.id as AppPage)}
+            type="button"
+          >
+            <span>{index + 1}</span>{stage.label}
+          </button>
+        ))}
+      </nav>
 
-      <div className="workspace-grid">
-        <section className="panel form-panel">
-          <p className="panel-number">01</p>
-          <h3>새 프로젝트</h3>
-          <p className="panel-copy">프로젝트 이름과 핵심 아이디어로 첫 PRD 초안을 만듭니다.</p>
-          <form onSubmit={handleSubmit} noValidate>
-            <label htmlFor="project-name">프로젝트 이름</label>
-            <input id="project-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="예: Globeat" />
-            {errors.name && <p className="field-error">{errors.name}</p>}
-
-            <label htmlFor="project-idea">아이디어</label>
-            <textarea id="project-idea" value={idea} onChange={(event) => setIdea(event.target.value)} placeholder="누구의 어떤 문제를 어떻게 해결할지 적어 주세요." rows={7} />
-            {errors.idea && <p className="field-error">{errors.idea}</p>}
-            {saveError && <p className="save-error">{saveError}</p>}
-            <button type="submit" disabled={isSaving}>{isSaving ? "초안 생성 중…" : "PRD 초안 만들기"}</button>
-          </form>
-        </section>
-
-        <section className="panel project-panel">
-          <p className="panel-number">02</p>
-          <h3>프로젝트 작업대</h3>
-          {isLoading ? (
-            <div className="empty-state" aria-live="polite">
-              <strong>프로젝트를 불러오는 중입니다…</strong>
-            </div>
-          ) : loadError ? (
-            <div className="empty-state error-state" role="alert">
-              <strong>프로젝트를 열 수 없습니다.</strong>
-              <p>{loadError}</p>
-            </div>
-          ) : projects.length === 0 ? (
-            <div className="empty-state">
-              <span>+</span>
-              <strong>아직 프로젝트가 없습니다.</strong>
-              <p>왼쪽에서 첫 아이디어를 기록하면 PRD 초안이 여기에 열립니다.</p>
-            </div>
-          ) : (
-            <div className="project-list">
-              {projects.map(({ project, prd }) => (
-                <article className="project-card" key={project.id}>
-                  <div><p className="eyebrow">PROJECT WORKSPACE</p><h4>{project.name}</h4></div>
-                  <p>{project.idea}</p>
-                  <nav className="workspace-stages" aria-label={`${project.name} 작업 단계`}>
-                    {[
-                      ["prd", "2. PRD"],
-                      ["features", "3. 기능명세"],
-                      ["user-flow", "4. 유저플로우"],
-                      ["wireframe", "5. 와이어프레임"],
-                      ["development", "6. 개발"],
-                    ].map(([stage, label], index) => (
-                      <button
-                        className={(stageByProject[project.id] ?? "prd") === stage ? "active" : ""}
-                        disabled={index > 1}
-                        key={stage}
-                        onClick={() => setStageByProject((current) => ({ ...current, [project.id]: stage as WorkspaceStage }))}
-                        type="button"
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </nav>
-                  {(stageByProject[project.id] ?? "prd") === "prd" && (
-                    <section className="workspace-stage-content">
-                      <div className="stage-heading"><span>02</span><div><p className="eyebrow">PRODUCT REQUIREMENTS</p><h5>PRD · REV {prd.revisionNumber}</h5></div></div>
-                      <PrdEditor revision={prd} onSave={(contentMarkdown) => handleSavePrd(project.id, contentMarkdown)} />
-                    </section>
-                  )}
-                  {(stageByProject[project.id] ?? "prd") === "features" && (
-                    <section className="workspace-stage-content">
-                      <FeatureMap projectId={project.id} sourceDocumentId={prd.documentId} />
-                    </section>
-                  )}
-                </article>
+      {page === "project" && (
+        <section className="full-page project-create-page">
+          <div className="page-intro">
+            <p className="eyebrow">01 · NEW PROJECT</p>
+            <h2>아이디어에서 시작합니다.</h2>
+            <p>프로젝트 이름과 핵심 아이디어만 입력하면 작업대와 PRD 초안을 자동으로 만듭니다.</p>
+          </div>
+          <div className="project-page-grid">
+            <form className="project-create-form" onSubmit={handleSubmit} noValidate>
+              <label htmlFor="project-name">프로젝트 이름</label>
+              <input id="project-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="예: Globeat" />
+              {errors.name && <p className="field-error">{errors.name}</p>}
+              <label htmlFor="project-idea">아이디어</label>
+              <textarea id="project-idea" value={idea} onChange={(event) => setIdea(event.target.value)} placeholder="누구의 어떤 문제를 어떻게 해결할지 적어 주세요." rows={9} />
+              {errors.idea && <p className="field-error">{errors.idea}</p>}
+              {saveError && <p className="save-error">{saveError}</p>}
+              <button type="submit" disabled={isSaving}>{isSaving ? "프로젝트 생성 중…" : "프로젝트 만들고 PRD로 이동"}</button>
+            </form>
+            <aside className="recent-projects">
+              <p className="eyebrow">RECENT PROJECTS</p><h3>기존 프로젝트</h3>
+              {isLoading ? <p>불러오는 중…</p> : loadError ? <p className="field-error">{loadError}</p> : projects.length === 0 ? <p>아직 저장된 프로젝트가 없습니다.</p> : projects.map(({ project }) => (
+                <button key={project.id} onClick={() => handleOpenProject(project.id)} type="button"><strong>{project.name}</strong><span>{project.idea}</span></button>
               ))}
-            </div>
-          )}
+            </aside>
+          </div>
         </section>
-      </div>
+      )}
+
+      {page === "prd" && selectedProject && (
+        <section className="full-page document-page">
+          <div className="page-heading-row">
+            <div><p className="eyebrow">02 · PRODUCT REQUIREMENTS</p><h2>{selectedProject.project.name} PRD</h2><p>{selectedProject.project.idea}</p></div>
+            <span className="revision-badge">REV {selectedProject.prd.revisionNumber}</span>
+          </div>
+          <PrdEditor revision={selectedProject.prd} onSave={handleSavePrd} />
+          <div className="page-actions"><button className="secondary" onClick={() => setPage("project")} type="button">이전: 프로젝트</button><button onClick={() => setPage("features")} type="button">다음: 기능명세</button></div>
+        </section>
+      )}
+
+      {page === "features" && selectedProject && (
+        <section className="full-page feature-page">
+          <FeatureMap projectId={selectedProject.project.id} sourceDocumentId={selectedProject.prd.documentId} />
+          <div className="page-actions"><button className="secondary" onClick={() => setPage("prd")} type="button">이전: PRD</button><button disabled type="button">다음: 유저플로우</button></div>
+        </section>
+      )}
     </main>
   );
 }

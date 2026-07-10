@@ -31,7 +31,24 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode): FeatureNode[] 
   const positions = new Map<string, { x: number; y: number }>();
   const root = features.find((feature) => !feature.parentId);
   if (!root) return [];
-  positions.set(root.id, mode === "tree" ? { x: 40, y: 210 } : { x: 420, y: 220 });
+  positions.set(root.id, mode === "tree" ? { x: 40, y: 210 } : { x: 430, y: 260 });
+
+  const mindMapAngles = new Map<string, number>();
+  if (mode === "mindmap") {
+    const leaves = features.filter((feature) => (childrenByParent.get(feature.id) ?? []).length === 0);
+    leaves.forEach((leaf, index) => {
+      mindMapAngles.set(leaf.id, -Math.PI / 2 + (Math.PI * 2 * index) / Math.max(leaves.length, 1));
+    });
+    const resolveAngle = (feature: FeatureSpec): number => {
+      const saved = mindMapAngles.get(feature.id);
+      if (saved !== undefined) return saved;
+      const childAngles = (childrenByParent.get(feature.id) ?? []).map(resolveAngle);
+      const angle = childAngles.reduce((sum, value) => sum + value, 0) / Math.max(childAngles.length, 1);
+      mindMapAngles.set(feature.id, angle);
+      return angle;
+    };
+    resolveAngle(root);
+  }
 
   const placeChildren = (parent: FeatureSpec, depth: number) => {
     const children = childrenByParent.get(parent.id) ?? [];
@@ -39,13 +56,14 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode): FeatureNode[] 
       if (mode === "tree") {
         positions.set(child.id, { x: 40 + depth * 270, y: 60 + index * 170 + (depth - 1) * 34 });
       } else {
-        const direction = index % 2 === 0 ? 1 : -1;
-        const rank = Math.floor(index / 2) + 1;
-        const parentPosition = positions.get(parent.id) ?? { x: 420, y: 220 };
+        const angle = mindMapAngles.get(child.id) ?? 0;
+        const radius = depth * 230;
         positions.set(child.id, {
-          x: parentPosition.x + direction * (220 + depth * 35),
-          y: parentPosition.y + (rank - 0.5) * 165 * (depth % 2 === 0 ? -1 : 1),
+          x: 430 + Math.cos(angle) * radius,
+          y: 260 + Math.sin(angle) * radius,
         });
+        placeChildren(child, depth + 1);
+        return;
       }
       placeChildren(child, depth + 1);
     });
@@ -106,7 +124,7 @@ export function FeatureMap({ projectId, sourceDocumentId }: FeatureMapProps) {
   return (
     <section className="feature-map-section">
       <div className="feature-map-header">
-        <div><p className="eyebrow">03 · FEATURE SPECIFICATION</p><h5>기능명세</h5><small>{persistenceMessage}</small></div>
+        <div><p className="eyebrow">03 · FEATURE SPECIFICATION</p><h5>계층형 기능명세</h5><small>{persistenceMessage}</small></div>
         <div className="view-switch" aria-label="기능명세 보기 방식">
           <button className={mode === "tree" ? "selected" : ""} onClick={() => setMode("tree")} type="button">트리</button>
           <button className={mode === "mindmap" ? "selected" : ""} onClick={() => setMode("mindmap")} type="button">마인드맵</button>
