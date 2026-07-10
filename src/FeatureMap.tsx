@@ -4,6 +4,7 @@ import {
   Controls,
   MarkerType,
   MiniMap,
+  Panel,
   ReactFlow,
   type Connection,
   type Edge,
@@ -19,6 +20,7 @@ import { FeatureProposalPanel } from "./FeatureProposalPanel";
 
 type ViewMode = "tree" | "mindmap";
 type WorkspaceViewMode = "document" | ViewMode;
+type LayoutDensity = "default" | "compact";
 type FeatureNode = Node<FeatureNodeData>;
 const nodeTypes = { feature: FeatureNodeCard };
 const MAGNET_DISTANCE = 34;
@@ -34,7 +36,7 @@ interface FeatureMapProps {
   projectName?: string;
 }
 
-function layoutFeatures(features: FeatureSpec[], mode: ViewMode): FeatureNode[] {
+function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutDensity="default"): FeatureNode[] {
   const childrenByParent = new Map<string | undefined, FeatureSpec[]>();
   for (const feature of features) {
     const siblings = childrenByParent.get(feature.parentId) ?? [];
@@ -69,9 +71,9 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode): FeatureNode[] 
     const placeTreeNode = (feature: FeatureSpec, depth: number): number => {
       const children = childrenByParent.get(feature.id) ?? [];
       const y = children.length === 0
-        ? 35 + nextLeafRow++ * 74
+        ? 35 + nextLeafRow++ * (density==="compact"?54:74)
         : children.map((child) => placeTreeNode(child, depth + 1)).reduce((sum, value) => sum + value, 0) / children.length;
-      positions.set(feature.id, { x: 30 + depth * 270, y });
+      positions.set(feature.id, { x: 30 + depth * (density==="compact"?235:270), y });
       return y;
     };
     placeTreeNode(root, 0);
@@ -82,7 +84,7 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode): FeatureNode[] 
     children.forEach((child) => {
       if (mode === "mindmap") {
         const angle = mindMapAngles.get(child.id) ?? 0;
-        const radius = depth * 230;
+        const radius = depth * (density==="compact"?190:230);
         positions.set(child.id, {
           x: 430 + Math.cos(angle) * radius,
           y: 260 + Math.sin(angle) * radius,
@@ -108,8 +110,9 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
   const generatedFeatures = useMemo(() => createDevelopmentFeatureSpec(projectId, projectName), [projectId, projectName]);
   const [features, setFeatures] = useState(generatedFeatures);
   const [mode, setMode] = useState<WorkspaceViewMode>("document");
+  const [layoutDensity,setLayoutDensity]=useState<LayoutDensity>("default");
   const mapMode: ViewMode = mode === "mindmap" ? "mindmap" : "tree";
-  const defaultNodes = useMemo(() => layoutFeatures(features, mapMode), [features, mapMode]);
+  const defaultNodes = useMemo(() => layoutFeatures(features, mapMode,layoutDensity), [features, mapMode,layoutDensity]);
   const [positionsByMode, setPositionsByMode] = useState<Record<ViewMode, Record<string, { x: number; y: number }>>>({ tree: {}, mindmap: {} });
   const [persistenceMessage, setPersistenceMessage] = useState("기능명세를 불러오는 중…");
   const [selectedFeatureId, setSelectedFeatureId] = useState<string>();
@@ -186,11 +189,12 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
     }
   }
 
-  function handleResetLayout() {
-    const positions = Object.fromEntries(defaultNodes.map((node) => [node.id, node.position]));
+  function handleResetLayout(density:LayoutDensity) {
+    setLayoutDensity(density);const layout=layoutFeatures(features,mapMode,density);
+    const positions = Object.fromEntries(layout.map((node) => [node.id, node.position]));
     setPositionsByMode((current) => ({ ...current, [mapMode]: positions }));
-    void Promise.all(defaultNodes.map((node) => repository.savePosition({ projectId, featureId: node.id, viewMode: mapMode, positionX: node.position.x, positionY: node.position.y })))
-      .then(() => setPersistenceMessage("기본 정렬을 저장했습니다."))
+    void Promise.all(layout.map((node) => repository.savePosition({ projectId, featureId: node.id, viewMode: mapMode, positionX: node.position.x, positionY: node.position.y })))
+      .then(() => setPersistenceMessage(density==="compact"?"좁은 정렬을 저장했습니다.":"기본 정렬을 저장했습니다."))
       .catch(() => setPersistenceMessage("기본 정렬을 저장하지 못했습니다."));
   }
 
@@ -204,15 +208,15 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
           <button className={mode === "document" ? "selected" : ""} onClick={() => setMode("document")} type="button">문서</button>
           <button className={mode === "tree" ? "selected" : ""} onClick={() => setMode("tree")} type="button">트리</button>
           <button className={mode === "mindmap" ? "selected" : ""} onClick={() => setMode("mindmap")} type="button">마인드맵</button>
-          {mode !== "document" && <button onClick={handleResetLayout} type="button">기본 정렬</button>}
           <button className="proposal-open-button" onClick={() => setIsProposalPanelOpen(true)} type="button">AI 변경안</button>
         </div>
       </div>
       {mode === "document" ? <FeatureDocumentView features={features} onSave={handleSaveFeature} /> : <div className="feature-canvas" data-view-mode={mode}>
-        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.18, duration: 350, maxZoom: 0.9 }} minZoom={0.25} maxZoom={1.8} panOnScroll>
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.18, duration: 350, maxZoom: 0.9 }} minZoom={0.25} maxZoom={1.8} panOnScroll proOptions={{hideAttribution:true}}>
           <Background color="#343741" gap={24} size={1} />
           <MiniMap pannable zoomable />
           <Controls showInteractive={false} />
+          <Panel position="bottom-right"><div className="canvas-layout-controls"><button onClick={()=>handleResetLayout("default")} type="button">기본 정렬</button><button onClick={()=>handleResetLayout("compact")} type="button">좁은 정렬</button></div></Panel>
         </ReactFlow>
         {selectedFeature && <aside className="node-document-panel"><button className="panel-close" onClick={() => setSelectedFeatureId(undefined)} type="button">×</button><FeatureEditor key={selectedFeature.id} feature={selectedFeature} onSave={handleSaveFeature} /></aside>}
       </div>}

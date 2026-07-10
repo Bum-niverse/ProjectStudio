@@ -60,6 +60,7 @@ pub fn run() {
             feature_change_proposals::list_feature_change_proposals,
             feature_change_proposals::decide_feature_change_proposal,
             developer_tools::check_developer_tools,
+            developer_tools::check_tool_connection,
             codex_sync::sync_project_documents,
             user_flow_repository::initialize_user_flow,
             user_flow_repository::update_user_flow_node,

@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::process::Command;
 
 #[derive(Serialize)]
@@ -33,6 +33,26 @@ fn version_status(program: &str, args: &[&str]) -> ToolStatus {
             is_installed: false,
             version: None,
         },
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckToolConnectionInput {
+    program_path: String,
+}
+
+#[tauri::command]
+pub async fn check_tool_connection(input: CheckToolConnectionInput) -> Result<ToolStatus, String> {
+    let program_path = input.program_path.trim();
+    if program_path.is_empty() || program_path.len() > 500 {
+        return Err("실행 파일 경로를 확인해 주세요.".to_owned());
+    }
+    let status = version_status(program_path, &["--version"]);
+    if status.is_installed {
+        Ok(status)
+    } else {
+        Err("해당 경로에서 실행 가능한 도구를 찾지 못했습니다.".to_owned())
     }
 }
 
