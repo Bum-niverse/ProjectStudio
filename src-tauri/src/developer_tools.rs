@@ -11,7 +11,9 @@ pub struct ToolStatus {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeveloperToolsStatus {
+    claude: ToolStatus,
     codex: ToolStatus,
+    antigravity: ToolStatus,
     git: ToolStatus,
     github_cli: ToolStatus,
     is_github_authenticated: bool,
@@ -35,7 +37,9 @@ fn version_status(program: &str, args: &[&str]) -> ToolStatus {
 
 #[tauri::command]
 pub async fn check_developer_tools() -> DeveloperToolsStatus {
+    let claude = version_status("claude", &["--version"]);
     let codex = version_status("codex", &["--version"]);
+    let antigravity = version_status("antigravity", &["--version"]);
     let git = version_status("git", &["--version"]);
     let github_cli = version_status("gh", &["--version"]);
     let is_github_authenticated = github_cli.is_installed
@@ -45,7 +49,9 @@ pub async fn check_developer_tools() -> DeveloperToolsStatus {
             .is_ok_and(|output| output.status.success());
 
     DeveloperToolsStatus {
+        claude,
         codex,
+        antigravity,
         git,
         github_cli,
         is_github_authenticated,
