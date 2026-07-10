@@ -1,10 +1,10 @@
 export type ThemeId = "pure-black" | "light" | "neutral-gray" | "vscode-dark";
 
 export const THEMES: Array<{ id: ThemeId; name: string; description: string; colors: string[] }> = [
-  { id: "pure-black", name: "Pure Black", description: "OLED에 어울리는 깊은 검정과 라임 포인트", colors: ["#050506", "#111216", "#d9ff57"] },
-  { id: "light", name: "Light", description: "밝은 문서 작업용 흰색과 파란 포인트", colors: ["#f5f6f8", "#ffffff", "#2563eb"] },
-  { id: "neutral-gray", name: "Neutral Gray", description: "눈부심을 줄인 중성 회색 작업 환경", colors: ["#25272b", "#303238", "#e5c07b"] },
-  { id: "vscode-dark", name: "VS Code Dark", description: "VS Code 계열의 짙은 남회색과 파란 포인트", colors: ["#181818", "#1f1f1f", "#007acc"] },
+  { id: "pure-black", name: "Pure Black", description: "OLED용 검정 작업대와 절제된 라임 강조", colors: ["#000000", "#0b0b0c", "#b7e336"] },
+  { id: "light", name: "VS Code Light", description: "Microsoft Light Modern 작업대 팔레트", colors: ["#f8f8f8", "#ffffff", "#005fb8"] },
+  { id: "neutral-gray", name: "Neutral Gray", description: "중성 회색 패널과 따뜻한 황금 강조", colors: ["#252526", "#2d2d30", "#c09553"] },
+  { id: "vscode-dark", name: "VS Code Dark", description: "Microsoft Dark Modern 작업대 팔레트", colors: ["#181818", "#1f1f1f", "#0078d4"] },
 ];
 
 const THEME_KEY = "projectstudio:theme";

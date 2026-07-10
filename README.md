@@ -16,7 +16,7 @@
 
 ## 현재 단계
 
-프로젝트 → PRD → 기능명세의 첫 수직 흐름과 로컬 SQLite 저장을 구현했습니다. 흰색·검은색·회색·VS Code Dark 테마를 설정에서 바꿀 수 있고, 로컬 Codex/Git/GitHub CLI 상태와 프로젝트 저장소 연결을 관리할 수 있습니다. 초기 구현은 개인용 로컬 프로그램에 집중하며 로그인, 결제, 다중 사용자 협업은 제외합니다.
+프로젝트 → PRD → 기능명세의 첫 수직 흐름과 로컬 SQLite 저장을 구현했습니다. Pure Black·VS Code Light·Neutral Gray·VS Code Dark 테마를 설정에서 바꿀 수 있으며, Light/Dark 테마는 공식 VS Code Modern 색상 토큰에 맞춰 배경과 글씨 대비를 함께 전환합니다. 로컬 Codex/Git/GitHub CLI 상태와 프로젝트 저장소 연결도 관리할 수 있습니다. 초기 구현은 개인용 로컬 프로그램에 집중하며 로그인, 결제, 다중 사용자 협업은 제외합니다.
 
 - [MVP 아키텍처와 구현 계획](docs/mvp-architecture.md)
 - [개발 진행](docs/progress.md)

@@ -26,6 +26,8 @@ export function FeatureEditor({ feature, onSave }: { feature: FeatureSpec; onSav
     finally { setIsSaving(false); }
   }
 
+  async function handleColorChange(colorKey:FeatureSpec["colorKey"]){const updated={...draft,colorKey};setDraft(updated);setMessage("색상을 저장하는 중…");try{await onSave(updated);setMessage("노드 색상을 자동 저장했습니다.");}catch{setMessage("색상을 저장하지 못했습니다. 선택은 유지됩니다.");}}
+
   return <div className="feature-document-editor">
     <div className="document-editor-top"><span>ID {draft.id}</span><button onClick={handleSave} disabled={isSaving} type="button">{isSaving ? "저장 중…" : "문서 저장"}</button></div>
     <input className="document-title-input" value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} aria-label="기능명" />
@@ -34,7 +36,7 @@ export function FeatureEditor({ feature, onSave }: { feature: FeatureSpec; onSav
       <label>중요도<select value={draft.priority} onChange={(event) => setDraft({ ...draft, priority: event.target.value as FeatureSpec["priority"] })}><option value="low">낮음</option><option value="medium">보통</option><option value="high">높음</option><option value="critical">핵심</option></select></label>
       <label>역할<input value={draft.role} onChange={(event) => setDraft({ ...draft, role: event.target.value })} /></label>
     </div>
-    <div className="node-color-palette" aria-label="노드 색상">{NODE_COLORS.map((color) => <button aria-label={`${color.label} 색상`} className={draft.colorKey === color.key ? "selected" : ""} key={color.key} onClick={() => setDraft({ ...draft, colorKey: color.key })} style={{ "--node-color": color.color } as CSSProperties} type="button" />)}</div>
+    <div className="node-color-palette" aria-label="노드 색상">{NODE_COLORS.map((color) => <button aria-label={`${color.label} 색상`} className={draft.colorKey === color.key ? "selected" : ""} key={color.key} onClick={() => void handleColorChange(color.key)} style={{ "--node-color": color.color } as CSSProperties} type="button" />)}</div>
     <label className="document-section">설명<textarea rows={5} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
     <section className="criteria-section"><div><h4>수용 기준</h4><button className="secondary" onClick={addCriterion} type="button">+ 기준 추가</button></div>
       {draft.acceptanceCriteria.map((criterion, index) => <div className="criterion-row" key={criterion.id}><input type="checkbox" checked={criterion.isMet} onChange={(event) => updateCriterion(index, { isMet: event.target.checked })} /><textarea rows={2} value={criterion.description} onChange={(event) => updateCriterion(index, { description: event.target.value })} /><button onClick={() => setDraft((current) => ({ ...current, acceptanceCriteria: current.acceptanceCriteria.filter((_, itemIndex) => itemIndex !== index) }))} type="button">×</button></div>)}
