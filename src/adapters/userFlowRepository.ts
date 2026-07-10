@@ -3,7 +3,7 @@ import type { UserFlowEdge, UserFlowNode } from "../domain/userFlow";
 import type { UserFlowRepository } from "../ports/userFlowRepository";
 
 class TauriUserFlowRepository implements UserFlowRepository {
-  initialize(projectId: string, nodes: UserFlowNode[], edges: UserFlowEdge[]) { return invoke<{nodes:UserFlowNode[];edges:UserFlowEdge[]}>("initialize_user_flow", { input: { projectId, nodes, edges, createdAt: new Date().toISOString() } }); }
+  initialize(projectId: string, nodes: UserFlowNode[], edges: UserFlowEdge[],replaceExisting=false) { return invoke<{nodes:UserFlowNode[];edges:UserFlowEdge[]}>("initialize_user_flow", { input: { projectId, nodes, edges, replaceExisting,createdAt: new Date().toISOString() } }); }
   updateNode(node: UserFlowNode) { return invoke<UserFlowNode>("update_user_flow_node", { input: { node, updatedAt: new Date().toISOString() } }); }
   connect(projectId: string, sourceNodeId: string, targetNodeId: string) { return invoke<UserFlowEdge>("connect_user_flow_nodes", { input: { id: `flow-edge-${crypto.randomUUID()}`, projectId, sourceNodeId, targetNodeId, createdAt: new Date().toISOString() } }); }
   createNode(node:UserFlowNode){return invoke<UserFlowNode>("create_user_flow_node",{input:{node,createdAt:new Date().toISOString()}});}

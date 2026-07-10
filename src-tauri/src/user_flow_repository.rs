@@ -36,6 +36,8 @@ pub struct InitializeInput {
     project_id: String,
     nodes: Vec<UserFlowNode>,
     edges: Vec<UserFlowEdge>,
+    #[serde(default)]
+    replace_existing: bool,
     created_at: String,
 }
 #[derive(Deserialize)]
@@ -135,6 +137,18 @@ pub async fn initialize_user_flow(
         .begin()
         .await
         .map_err(|error| error.to_string())?;
+    if input.replace_existing {
+        sqlx::query("DELETE FROM user_flow_edges WHERE project_id = ?")
+            .bind(&input.project_id)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|error| format!("기존 유저플로우 연결을 정리하지 못했습니다: {error}"))?;
+        sqlx::query("DELETE FROM user_flow_nodes WHERE project_id = ?")
+            .bind(&input.project_id)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|error| format!("기존 유저플로우 단계를 정리하지 못했습니다: {error}"))?;
+    }
     for node in &input.nodes {
         if !valid_kind(&node.kind) || node.project_id != input.project_id {
             return Err("유효하지 않은 유저플로우 노드입니다.".to_owned());
