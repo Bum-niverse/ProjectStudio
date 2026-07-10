@@ -23,7 +23,7 @@ type LayoutDensity = "default" | "compact";
 type FeatureNode = Node<FeatureNodeData>;
 const nodeTypes = { feature: FeatureNodeCard };
 const MAGNET_DISTANCE = 34;
-const FEATURE_NODE_LAYOUT_VERSION="wide-v1";
+const FEATURE_NODE_LAYOUT_VERSION="horizontal-details-v2";
 
 function magnetize(value: number, candidates: number[]): number {
   const closest = candidates.reduce((best, candidate) => Math.abs(candidate - value) < Math.abs(best - value) ? candidate : best, value);
@@ -70,10 +70,15 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutD
     let nextLeafRow = 0;
     const placeTreeNode = (feature: FeatureSpec, depth: number): number => {
       const children = childrenByParent.get(feature.id) ?? [];
-      const y = children.length === 0
-        ? 35 + nextLeafRow++ * (density==="compact"?54:74)
-        : children.map((child) => placeTreeNode(child, depth + 1)).reduce((sum, value) => sum + value, 0) / children.length;
-      positions.set(feature.id, { x: 30 + depth * (density==="compact"?315:350), y });
+      const horizontalGap=density==="compact"?285:330;
+      if(children.length>1&&children.every(child=>(childrenByParent.get(child.id)??[]).length===0)){
+        const y=35+nextLeafRow++*(density==="compact"?46:58);
+        positions.set(feature.id,{x:30+depth*horizontalGap,y});
+        children.forEach((child,index)=>positions.set(child.id,{x:30+(depth+1+index)*horizontalGap,y}));
+        return y;
+      }
+      const y = children.length === 0 ? 35 + nextLeafRow++ * (density==="compact"?46:58) : children.map((child) => placeTreeNode(child, depth + 1)).reduce((sum, value) => sum + value, 0) / children.length;
+      positions.set(feature.id, { x: 30 + depth * horizontalGap, y });
       return y;
     };
     placeTreeNode(root, 0);
@@ -209,7 +214,7 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
         </div>
       </div>
       {mode === "document" ? <FeatureDocumentView features={features} onSave={handleSaveFeature} /> : <div className="feature-canvas" data-view-mode={mode}>
-        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.18, duration: 350, maxZoom: 0.9 }} minZoom={0.25} maxZoom={1.8} panOnScroll proOptions={{hideAttribution:true}}>
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.08, duration: 350, maxZoom: 0.9 }} minZoom={0.12} maxZoom={1.8} panOnScroll proOptions={{hideAttribution:true}}>
           <Background color="var(--theme-border)" gap={24} size={1} />
           <Controls showInteractive={false} />
           <Panel position="bottom-right"><div className="canvas-layout-controls"><button onClick={()=>handleResetLayout("default")} type="button">기본 정렬</button><button onClick={()=>handleResetLayout("compact")} type="button">좁은 정렬</button></div></Panel>
