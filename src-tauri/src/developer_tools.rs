@@ -65,6 +65,11 @@ fn codex_status() -> ToolStatus {
     direct
 }
 
+pub(crate) fn codex_program_path() -> Option<String> {
+    let status = codex_status();
+    status.is_installed.then_some(status.program_path).flatten()
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckToolConnectionInput {
