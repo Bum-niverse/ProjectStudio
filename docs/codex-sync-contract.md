@@ -14,15 +14,13 @@ SQLite는 편집 데이터의 단일 원본이다. Markdown과 JSON은 Codex 및
 .projectstudio/
   manifest.json
   project.md
-  requirements/
-    R-XXXXXX.md
   features/
     F-XXXXXX.md
   changes/
     latest.json
-    history/
-      2026-07-10T090000Z.json
 ```
+
+v0.1 구현 범위는 `project.md`, `manifest.json`, 기능 Markdown과 `changes/latest.json`이다. 요구사항 전용 파일, 변경 이력 보관과 코드·테스트 역동기화는 후속 단계에서 추가한다.
 
 ## 안정적인 식별자
 

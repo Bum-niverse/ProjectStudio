@@ -4,8 +4,10 @@ import { ProjectValidationError, type ProjectValidationErrors, type ProjectWithP
 import { FeatureMap } from "./FeatureMap";
 import { PrdEditor } from "./PrdEditor";
 import "./styles.css";
+import { SettingsPage } from "./SettingsPage";
+import { applyTheme, loadTheme, type ThemeId } from "./theme";
 
-type AppPage = "project" | "prd" | "features";
+type AppPage = "project" | "prd" | "features" | "settings";
 
 const STAGES = [
   { id: "project", label: "프로젝트" },
@@ -19,6 +21,8 @@ const STAGES = [
 export default function App() {
   const service = useMemo(() => createProjectService(), []);
   const [page, setPage] = useState<AppPage>("project");
+  const [returnPage, setReturnPage] = useState<AppPage>("project");
+  const [theme, setTheme] = useState<ThemeId>(() => loadTheme());
   const [projects, setProjects] = useState<ProjectWithPrd[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>();
   const [name, setName] = useState("");
@@ -30,7 +34,9 @@ export default function App() {
   const [loadError, setLoadError] = useState<string>();
 
   const selectedProject = projects.find(({ project }) => project.id === selectedProjectId);
-  const activeStageIndex = page === "project" ? 0 : page === "prd" ? 1 : 2;
+  const activeStageIndex = page === "project" ? 0 : page === "prd" ? 1 : page === "features" ? 2 : -1;
+
+  useEffect(() => { applyTheme(theme); }, [theme]);
 
   useEffect(() => {
     void service.listProjects().then(setProjects)
@@ -76,15 +82,17 @@ export default function App() {
     setPage(target);
   }
 
+  function handleOpenSettings() { setReturnPage(page === "settings" ? "project" : page); setPage("settings"); }
+
   return (
     <main className="app-shell page-shell">
       <header className="topbar">
         <div className="brand-mark">PS</div>
         <div><p className="eyebrow">LOCAL PRODUCT WORKSPACE</p><h1>ProjectStudio</h1></div>
-        <span className="mode-badge">개발 모드 · 외부 전송 없음</span>
+        <div className="topbar-actions"><span className="mode-badge">개발 모드 · 외부 전송 없음</span><button onClick={handleOpenSettings} type="button" aria-label="설정 열기">⚙ 설정</button></div>
       </header>
 
-      <nav className="page-progress" aria-label="제품 개발 단계">
+      {page !== "settings" && <nav className="page-progress" aria-label="제품 개발 단계">
         {STAGES.map((stage, index) => (
           <button
             className={index === activeStageIndex ? "active" : index < activeStageIndex ? "complete" : ""}
@@ -96,7 +104,9 @@ export default function App() {
             <span>{index + 1}</span>{stage.label}
           </button>
         ))}
-      </nav>
+      </nav>}
+
+      {page === "settings" && <SettingsPage theme={theme} projectId={selectedProject?.project.id} onThemeChange={setTheme} onClose={() => setPage(returnPage === "settings" ? "project" : returnPage)} />}
 
       {page === "project" && (
         <section className="full-page project-create-page">

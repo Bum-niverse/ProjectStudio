@@ -1,3 +1,5 @@
+mod codex_sync;
+mod developer_tools;
 mod feature_repository;
 mod project_repository;
 
@@ -31,7 +33,9 @@ pub fn run() {
             feature_repository::save_feature_position,
             feature_repository::list_feature_positions,
             feature_repository::update_feature,
-            feature_repository::reparent_feature
+            feature_repository::reparent_feature,
+            developer_tools::check_developer_tools,
+            codex_sync::sync_project_documents
         ])
         .plugin(
             tauri_plugin_sql::Builder::default()

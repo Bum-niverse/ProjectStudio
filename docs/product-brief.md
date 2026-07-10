@@ -47,3 +47,5 @@ Globeat의 기획 문서를 가져오고 개발 작업, 코드, 테스트와 완
 Tree와 Mind map의 모든 노드는 왼쪽 입력점과 오른쪽 출력점을 사용한다. 출력점에서 다른 노드 입력점으로 연결하면 부모·자식 관계를 변경하며 자기 연결과 순환 관계는 차단한다. 두 보기에서 노드를 선택하면 우측 상세 편집 패널을 열어 Document view와 동일한 문서를 수정한다. 개발 모드 초기 구조는 요구사항·기능·상세 기능의 3단계와 약 40개 이상의 문서를 생성한다.
 
 Codex 연동 산출물은 연결된 저장소의 `.projectstudio` 아래에 안정적인 ID 기반 Markdown과 JSON으로 기록하고 마지막 저장 이후 변경 항목은 `changes/latest.json`으로 제공한다. 상세 계약은 [Codex 동기화 계약](codex-sync-contract.md)에 정의한다.
+
+설정 페이지는 Pure Black, Light, Neutral Gray, VS Code Dark의 네 가지 테마를 제공하고 선택을 이 컴퓨터에 유지한다. Codex·Git·GitHub CLI의 설치 및 GitHub CLI 인증 상태를 로컬에서 확인하며 토큰이나 계정 응답은 저장하지 않는다. 프로젝트별 로컬 Git 저장소와 GitHub 원격 주소를 지정하고 사용자가 명시적으로 동기화할 때만 `.projectstudio` 문서를 쓴다.
