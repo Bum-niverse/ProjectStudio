@@ -7,4 +7,5 @@ export interface FeatureRepository {
   listPositions(projectId: string): Promise<FeaturePosition[]>;
   savePosition(position: FeaturePosition): Promise<void>;
   updateFeature(projectId: string, feature: FeatureSpec): Promise<FeatureSpec>;
+  reparentFeature(projectId: string, featureId: string, parentId: string): Promise<FeatureSpec[]>;
 }

@@ -5,6 +5,7 @@ import {
   MarkerType,
   MiniMap,
   ReactFlow,
+  type Connection,
   type Edge,
   type Node,
 } from "@xyflow/react";
@@ -12,10 +13,13 @@ import "@xyflow/react/dist/style.css";
 import { createDevelopmentFeatureSpec, type FeatureSpec } from "./domain/feature";
 import { createFeatureRepository } from "./adapters/featureRepository";
 import { FeatureDocumentView } from "./FeatureDocumentView";
+import { FeatureEditor } from "./FeatureDocumentView";
+import { FeatureNodeCard, type FeatureNodeData } from "./FeatureNodeCard";
 
 type ViewMode = "tree" | "mindmap";
 type WorkspaceViewMode = "document" | ViewMode;
-type FeatureNode = Node<{ feature: FeatureSpec; label: string }>;
+type FeatureNode = Node<FeatureNodeData>;
+const nodeTypes = { feature: FeatureNodeCard };
 const MAGNET_DISTANCE = 34;
 
 function magnetize(value: number, candidates: number[]): number {
@@ -93,7 +97,7 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode): FeatureNode[] 
     id: feature.id,
     position: positions.get(feature.id) ?? { x: 0, y: 0 },
     data: { feature, label: `${feature.title} · ${feature.status}` },
-    className: `feature-node priority-${feature.priority}`,
+    type: "feature",
   }));
 }
 
@@ -106,6 +110,7 @@ export function FeatureMap({ projectId, sourceDocumentId }: FeatureMapProps) {
   const defaultNodes = useMemo(() => layoutFeatures(features, mapMode), [features, mapMode]);
   const [positionsByMode, setPositionsByMode] = useState<Record<ViewMode, Record<string, { x: number; y: number }>>>({ tree: {}, mindmap: {} });
   const [persistenceMessage, setPersistenceMessage] = useState("기능명세를 불러오는 중…");
+  const [selectedFeatureId, setSelectedFeatureId] = useState<string>();
 
   useEffect(() => {
     void Promise.all([
@@ -151,6 +156,27 @@ export function FeatureMap({ projectId, sourceDocumentId }: FeatureMapProps) {
     setFeatures((current) => current.map((item) => item.id === saved.id ? saved : item));
   }
 
+  async function handleConnect(connection: Connection) {
+    if (!connection.source || !connection.target) return;
+    try {
+      const updated = await repository.reparentFeature(projectId, connection.target, connection.source);
+      setFeatures(updated);
+      setPersistenceMessage("기능 관계를 저장했습니다.");
+    } catch (error) {
+      setPersistenceMessage(error instanceof Error ? error.message : "기능 관계를 저장하지 못했습니다.");
+    }
+  }
+
+  function handleResetLayout() {
+    const positions = Object.fromEntries(defaultNodes.map((node) => [node.id, node.position]));
+    setPositionsByMode((current) => ({ ...current, [mapMode]: positions }));
+    void Promise.all(defaultNodes.map((node) => repository.savePosition({ projectId, featureId: node.id, viewMode: mapMode, positionX: node.position.x, positionY: node.position.y })))
+      .then(() => setPersistenceMessage("기본 정렬을 저장했습니다."))
+      .catch(() => setPersistenceMessage("기본 정렬을 저장하지 못했습니다."));
+  }
+
+  const selectedFeature = features.find((feature) => feature.id === selectedFeatureId);
+
   return (
     <section className="feature-map-section">
       <div className="feature-map-header">
@@ -159,14 +185,16 @@ export function FeatureMap({ projectId, sourceDocumentId }: FeatureMapProps) {
           <button className={mode === "document" ? "selected" : ""} onClick={() => setMode("document")} type="button">문서</button>
           <button className={mode === "tree" ? "selected" : ""} onClick={() => setMode("tree")} type="button">트리</button>
           <button className={mode === "mindmap" ? "selected" : ""} onClick={() => setMode("mindmap")} type="button">마인드맵</button>
+          {mode !== "document" && <button onClick={handleResetLayout} type="button">기본 정렬</button>}
         </div>
       </div>
       {mode === "document" ? <FeatureDocumentView features={features} onSave={handleSaveFeature} /> : <div className="feature-canvas" data-view-mode={mode}>
-        <ReactFlow nodes={nodes} edges={edges} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.18, duration: 350, maxZoom: 0.9 }} minZoom={0.25} maxZoom={1.8} panOnScroll>
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onNodeClick={(_, node) => setSelectedFeatureId(node.id)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.18, duration: 350, maxZoom: 0.9 }} minZoom={0.25} maxZoom={1.8} panOnScroll>
           <Background color="#343741" gap={24} size={1} />
           <MiniMap pannable zoomable />
           <Controls showInteractive={false} />
         </ReactFlow>
+        {selectedFeature && <aside className="node-document-panel"><button className="panel-close" onClick={() => setSelectedFeatureId(undefined)} type="button">×</button><FeatureEditor key={selectedFeature.id} feature={selectedFeature} onSave={handleSaveFeature} /></aside>}
       </div>}
     </section>
   );

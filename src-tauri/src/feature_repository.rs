@@ -53,6 +53,15 @@ pub struct UpdateFeatureInput {
     updated_at: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReparentFeatureInput {
+    project_id: String,
+    feature_id: String,
+    parent_id: String,
+    updated_at: String,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FeaturePosition {
@@ -196,6 +205,38 @@ pub async fn update_feature(
         .await
         .map_err(|error| error.to_string())?;
     Ok(input.feature)
+}
+
+#[tauri::command]
+pub async fn reparent_feature(
+    app: AppHandle,
+    input: ReparentFeatureInput,
+) -> Result<Vec<FeatureSpec>, String> {
+    if input.feature_id == input.parent_id {
+        return Err("기능을 자기 자신의 하위로 연결할 수 없습니다.".to_owned());
+    }
+    let mut connection = open_database(&app).await?;
+    let parent_project: Option<String> =
+        sqlx::query_scalar("SELECT project_id FROM features WHERE id = ?")
+            .bind(&input.parent_id)
+            .fetch_optional(&mut connection)
+            .await
+            .map_err(|error| error.to_string())?;
+    if parent_project.as_deref() != Some(input.project_id.as_str()) {
+        return Err("같은 프로젝트의 기능끼리만 연결할 수 있습니다.".to_owned());
+    }
+    let creates_cycle: i64 = sqlx::query_scalar("WITH RECURSIVE descendants(id) AS (SELECT id FROM features WHERE id = ? UNION ALL SELECT f.id FROM features f JOIN descendants d ON f.parent_feature_id = d.id) SELECT COUNT(*) FROM descendants WHERE id = ?")
+        .bind(&input.feature_id).bind(&input.parent_id).fetch_one(&mut connection).await.map_err(|error| error.to_string())?;
+    if creates_cycle > 0 {
+        return Err("하위 기능을 부모로 연결하면 순환 구조가 만들어집니다.".to_owned());
+    }
+    let result = sqlx::query("UPDATE features SET parent_feature_id = ?, updated_at = ? WHERE id = ? AND project_id = ? AND parent_feature_id IS NOT NULL")
+        .bind(&input.parent_id).bind(&input.updated_at).bind(&input.feature_id).bind(&input.project_id)
+        .execute(&mut connection).await.map_err(|error| format!("기능 관계를 저장하지 못했습니다: {error}"))?;
+    if result.rows_affected() != 1 {
+        return Err("루트 기능은 다른 기능 아래로 이동할 수 없습니다.".to_owned());
+    }
+    list_features(&mut connection, &input.project_id).await
 }
 
 #[tauri::command]

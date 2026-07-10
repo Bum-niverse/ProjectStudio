@@ -6,7 +6,7 @@ interface FeatureDocumentViewProps {
   onSave: (feature: FeatureSpec) => Promise<void>;
 }
 
-function FeatureEditor({ feature, onSave }: { feature: FeatureSpec; onSave: (feature: FeatureSpec) => Promise<void> }) {
+export function FeatureEditor({ feature, onSave }: { feature: FeatureSpec; onSave: (feature: FeatureSpec) => Promise<void> }) {
   const [draft, setDraft] = useState(feature);
   const [message, setMessage] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);

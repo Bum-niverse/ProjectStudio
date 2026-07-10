@@ -22,7 +22,7 @@ function criteria(featureId: string, descriptions: string[]): AcceptanceCriterio
 }
 
 export function createDevelopmentFeatureSpec(projectId: string): FeatureSpec[] {
-  return [
+  const baseFeatures: FeatureSpec[] = [
     { id: `${projectId}-root`, title: "핵심 제품 경험", status: "planned", priority: "critical", role: "제품 소유자", description: "제품의 최상위 목표", sortOrder: 0, acceptanceCriteria: [] },
     { id: `${projectId}-planning`, parentId: `${projectId}-root`, title: "기획 문서", status: "ready", priority: "high", role: "기획자", description: "아이디어를 PRD와 기능명세로 구조화하고 변경 이력을 보존한다.", sortOrder: 1, acceptanceCriteria: criteria(`${projectId}-planning`, ["PRD와 기능명세를 독립 페이지에서 열 수 있다.", "모든 문서는 안정적인 ID를 가진다."]) },
     { id: `${projectId}-prd`, parentId: `${projectId}-planning`, title: "PRD 생성·편집", status: "in_progress", priority: "critical", role: "제품 소유자", description: "아이디어에서 구조화된 PRD를 생성하고 직접 편집한다.", sortOrder: 2, acceptanceCriteria: criteria(`${projectId}-prd`, ["아이디어 입력 후 PRD가 자동 생성된다.", "편집 결과가 새 불변 리비전으로 저장된다.", "앱 재실행 후 최신 PRD가 복원된다."]) },
@@ -37,4 +37,17 @@ export function createDevelopmentFeatureSpec(projectId: string): FeatureSpec[] {
     { id: `${projectId}-tasks`, parentId: `${projectId}-delivery`, title: "개발 작업 생성", status: "planned", priority: "high", role: "개발자", description: "기능과 수용 기준에서 구현 작업을 생성한다.", sortOrder: 11, acceptanceCriteria: criteria(`${projectId}-tasks`, ["작업에 근거 기능과 수용 기준 ID가 포함된다.", "작업 상태를 기능 완료 판정에 반영한다."]) },
     { id: `${projectId}-completion`, parentId: `${projectId}-delivery`, title: "개발 완료 판정", status: "planned", priority: "high", role: "제품 소유자", description: "코드·테스트·수용 기준 근거를 종합해 완료 상태를 추적한다.", sortOrder: 12, acceptanceCriteria: criteria(`${projectId}-completion`, ["필수 수용 기준이 검증돼야 완료할 수 있다.", "완료 근거 커밋과 테스트를 표시한다."]) },
   ];
+  const detailParents = baseFeatures.filter((feature) => feature.parentId && feature.parentId !== `${projectId}-root`);
+  const detailFeatures = detailParents.flatMap((parent, parentIndex) => {
+    const templates = [
+      { suffix: "flow", title: `${parent.title} 기본 흐름`, description: `${parent.title}의 정상 사용자 흐름과 화면 상태를 정의한다.`, criterion: "사용자가 정상 흐름을 처음부터 끝까지 완료할 수 있다." },
+      { suffix: "validation", title: `${parent.title} 입력·검증·오류 복구`, description: `${parent.title}의 입력 조건, 오류 표시와 재시도 동작을 정의한다.`, criterion: "잘못된 입력과 저장 실패 시 원인을 보여주고 입력을 잃지 않는다." },
+      { suffix: "history", title: `${parent.title} 저장·변경 이력`, description: `${parent.title}의 저장, 재조회와 변경 추적 규칙을 정의한다.`, criterion: "저장한 결과를 다시 열 수 있고 변경 항목 ID를 추적할 수 있다." },
+    ];
+    return templates.map((template, index): FeatureSpec => {
+      const id = `${parent.id}-${template.suffix}`;
+      return { id, parentId: parent.id, title: template.title, description: template.description, status: "planned", priority: parent.priority, role: parent.role, sortOrder: 100 + parentIndex * 3 + index, acceptanceCriteria: criteria(id, [template.criterion]) };
+    });
+  });
+  return [...baseFeatures, ...detailFeatures];
 }
