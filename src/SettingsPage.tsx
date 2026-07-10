@@ -2,7 +2,7 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useState } from "react";
 import { THEMES, type ThemeId } from "./theme";
 
-interface ToolStatus { isInstalled: boolean; version?: string }
+interface ToolStatus { isInstalled: boolean; version?: string; programPath?:string }
 interface DeveloperToolsStatus { claude: ToolStatus; codex: ToolStatus; antigravity: ToolStatus; localLlm: ToolStatus; git: ToolStatus; githubCli: ToolStatus; isGithubAuthenticated: boolean }
 interface SyncResult { outputPath: string; documentCount: number; changedDocumentCount: number }
 interface SettingsPageProps { theme: ThemeId; projectId?: string; onThemeChange: (theme: ThemeId) => void; onClose: () => void }
@@ -29,9 +29,9 @@ export function SettingsPage({ theme, projectId, onThemeChange, onClose }: Setti
   async function handleCheckTools() {
     setIsChecking(true);
     try {
-      setTools(isTauri() ? await invoke<DeveloperToolsStatus>("check_developer_tools") : {
+      const checked=isTauri() ? await invoke<DeveloperToolsStatus>("check_developer_tools") : {
         claude: { isInstalled: false }, codex: { isInstalled: false }, antigravity: { isInstalled: false }, localLlm: { isInstalled: false }, git: { isInstalled: false }, githubCli: { isInstalled: false }, isGithubAuthenticated: false,
-      });
+      };setTools(checked);setToolPaths(current=>({...current,...Object.fromEntries(LLM_TOOLS.flatMap(item=>checked[item.id].programPath?[[item.id,checked[item.id].programPath]]:[]))}));
     } finally { setIsChecking(false); }
   }
 

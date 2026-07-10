@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
-use std::process::Command;
+use std::{env, fs, path::PathBuf, process::Command};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolStatus {
     is_installed: bool,
     version: Option<String>,
+    program_path: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -27,13 +28,41 @@ fn version_status(program: &str, args: &[&str]) -> ToolStatus {
             ToolStatus {
                 is_installed: true,
                 version: text.lines().next().map(str::trim).map(str::to_owned),
+                program_path: Some(program.to_owned()),
             }
         }
         _ => ToolStatus {
             is_installed: false,
             version: None,
+            program_path: None,
         },
     }
+}
+
+fn codex_status() -> ToolStatus {
+    let direct = version_status("codex", &["--version"]);
+    if direct.is_installed {
+        return direct;
+    }
+    let Some(local_app_data) = env::var_os("LOCALAPPDATA") else {
+        return direct;
+    };
+    let bin_root = PathBuf::from(local_app_data).join("OpenAI/Codex/bin");
+    let Ok(entries) = fs::read_dir(bin_root) else {
+        return direct;
+    };
+    for executable in entries
+        .flatten()
+        .map(|entry| entry.path().join("codex.exe"))
+    {
+        if executable.is_file() {
+            let status = version_status(&executable.to_string_lossy(), &["--version"]);
+            if status.is_installed {
+                return status;
+            }
+        }
+    }
+    direct
 }
 
 #[derive(Deserialize)]
@@ -59,7 +88,7 @@ pub async fn check_tool_connection(input: CheckToolConnectionInput) -> Result<To
 #[tauri::command]
 pub async fn check_developer_tools() -> DeveloperToolsStatus {
     let claude = version_status("claude", &["--version"]);
-    let codex = version_status("codex", &["--version"]);
+    let codex = codex_status();
     let antigravity = version_status("antigravity", &["--version"]);
     let local_llm = version_status("ollama", &["--version"]);
     let git = version_status("git", &["--version"]);

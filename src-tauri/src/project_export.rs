@@ -4,6 +4,8 @@ use std::{
     env, fs,
     path::{Path, PathBuf},
     process::Command,
+    thread,
+    time::Duration,
 };
 use tauri::{AppHandle, Manager};
 
@@ -197,7 +199,7 @@ fn report_html(data: &ProjectData, sections: &[String]) -> String {
         }
         body.push_str("</tbody></table></section>");
     }
-    format!("<!doctype html><html lang='ko'><meta charset='utf-8'><style>@page{{size:A4;margin:16mm}}body{{font-family:'Malgun Gothic','Segoe UI',sans-serif;color:#202124;font-size:9pt;line-height:1.5}}h1{{font-size:25pt;border-bottom:3px solid #202124;padding-bottom:8px}}h2{{font-size:16pt;margin-top:24px;page-break-after:avoid}}pre{{white-space:pre-wrap;font-family:'Malgun Gothic',sans-serif}}table{{width:100%;border-collapse:collapse;font-size:8pt}}thead{{display:table-header-group}}tr{{page-break-inside:avoid}}th,td{{padding:7px;border:1px solid #d0d0d0;vertical-align:top;text-align:left}}th{{background:#f0f0f0}}small,.meta{{color:#666}}</style><body><p class='meta'>ProjectStudio 기획 데이터 내보내기</p><h1>{}</h1>{}</body></html>",html(&data.name),body)
+    format!("<!doctype html><html lang='ko'><meta charset='utf-8'><style>@page{{size:A4;margin:16mm}}html,body{{background:#fff}}body{{font-family:'Malgun Gothic','Segoe UI',sans-serif;color:#202124;font-size:9pt;line-height:1.5}}h1{{font-size:25pt;border-bottom:3px solid #202124;padding-bottom:8px}}h2{{font-size:16pt;margin-top:24px;page-break-after:avoid}}pre{{white-space:pre-wrap;font-family:'Malgun Gothic',sans-serif}}table{{width:100%;border-collapse:collapse;font-size:8pt}}thead{{display:table-header-group}}tr{{page-break-inside:avoid}}th,td{{padding:7px;border:1px solid #d0d0d0;vertical-align:top;text-align:left}}th{{background:#f0f0f0}}small,.meta{{color:#666}}</style><body><p class='meta'>ProjectStudio 기획 데이터 내보내기</p><h1>{}</h1>{}</body></html>",html(&data.name),body)
 }
 fn edge_path() -> Option<PathBuf> {
     [
@@ -228,6 +230,13 @@ fn create_pdf(html_path: &Path, pdf_path: &Path) -> Result<(), String> {
         ])
         .output()
         .map_err(|e| format!("PDF 생성기를 실행하지 못했습니다: {e}"))?;
+    thread::sleep(Duration::from_secs(3));
+    for _ in 0..100 {
+        if pdf_path.metadata().is_ok_and(|metadata| metadata.len() > 0) {
+            break;
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
     let _ = fs::remove_dir_all(profile_path);
     if !output.status.success() || !pdf_path.is_file() {
         return Err("PDF 파일을 생성하지 못했습니다.".to_owned());
