@@ -21,3 +21,15 @@ MVP 아키텍처와 초기 데이터 모델을 확정하고 첫 수직 기능 �
 - [MVP 아키텍처와 구현 계획](docs/mvp-architecture.md)
 - [개발 진행](docs/progress.md)
 - [제품 초안](docs/product-brief.md)
+
+## 개발 명령
+
+```bash
+pnpm install
+pnpm dev
+pnpm test
+pnpm lint
+pnpm build
+```
+
+현재 브라우저 개발 미리보기는 메모리 저장소를 사용합니다. Tauri 네이티브 셸과 SQLite 연결 후 로컬 영속 저장으로 교체합니다.

@@ -1,0 +1,31 @@
+:root { font-family: Inter, Pretendard, "Segoe UI", sans-serif; color: #e8e9ee; background: #111216; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: radial-gradient(circle at 80% 0%, #20232d 0, #111216 34rem); }
+button, input, textarea { font: inherit; }
+.app-shell { width: min(1440px, 100%); margin: 0 auto; padding: 28px 42px 56px; }
+.topbar { display: flex; align-items: center; gap: 14px; padding-bottom: 28px; border-bottom: 1px solid #303139; }
+.brand-mark { display: grid; place-items: center; width: 46px; height: 46px; color: #14120b; background: #d9ff57; font: 700 16px Inter, "Segoe UI", sans-serif; }
+.topbar h1 { margin: 1px 0 0; font: 600 20px Inter, "Segoe UI", sans-serif; }
+.eyebrow { margin: 0; color: #989ba7; font: 600 10px Inter, "Segoe UI", sans-serif; letter-spacing: .16em; }
+.mode-badge { margin-left: auto; padding: 9px 12px; color: #cddd91; border: 1px solid #49532f; background: #202517; font-size: 12px; }
+.hero { display: grid; grid-template-columns: 1.35fr 1fr; gap: 72px; align-items: end; padding: 72px 0 48px; }
+.hero h2 { max-width: 760px; margin: 12px 0 18px; font: 600 clamp(36px, 5vw, 66px)/.98 Inter, "Segoe UI", sans-serif; letter-spacing: -.05em; }
+.hero > div > p:last-child { max-width: 630px; color: #a5a7b0; font-size: 16px; line-height: 1.7; }
+.progress-track { display: flex; justify-content: space-between; position: relative; padding-top: 20px; }
+.progress-track::before { content: ""; position: absolute; top: 7px; left: 8px; right: 8px; height: 1px; background: #3a3b43; }
+.step { position: relative; display: grid; gap: 10px; color: #70727c; font-size: 11px; text-align: center; }
+.step span { display: grid; place-items: center; width: 16px; height: 16px; margin: -20px auto 0; border: 1px solid #4d4e56; border-radius: 50%; background: #17181d; font-size: 8px; }
+.step.active { color: #d9ff57; }.step.active span { color: #12140b; border-color: #d9ff57; background: #d9ff57; }
+.workspace-grid { display: grid; grid-template-columns: minmax(320px, .82fr) minmax(440px, 1.35fr); border: 1px solid #303139; }
+.panel { min-height: 500px; padding: 30px; background: rgba(22, 23, 28, .86); }.panel + .panel { border-left: 1px solid #303139; }
+.panel-number { color: #d9ff57; font: 600 11px Inter, "Segoe UI", sans-serif; }.panel h3 { margin: 18px 0 10px; font: 600 26px Inter, "Segoe UI", sans-serif; }
+.panel-copy { margin: 0 0 30px; color: #8f919b; line-height: 1.6; }
+form { display: grid; } label { margin: 16px 0 8px; color: #c6c8cf; font-size: 12px; font-weight: 600; }
+input, textarea { width: 100%; color: #f1f2f4; border: 1px solid #3b3c44; outline: none; background: #111216; padding: 13px 14px; resize: vertical; }
+input:focus, textarea:focus { border-color: #d9ff57; box-shadow: 0 0 0 1px #d9ff57; }
+button { margin-top: 22px; padding: 14px 18px; color: #15170e; border: 0; background: #d9ff57; font-weight: 700; cursor: pointer; } button:disabled { opacity: .6; cursor: wait; }
+.field-error, .save-error { margin: 7px 0 0; color: #ff8d82; font-size: 12px; }.save-error { padding: 10px; border: 1px solid #743d3a; }
+.empty-state { display: grid; place-items: center; min-height: 330px; border: 1px dashed #3a3b43; color: #8f919b; text-align: center; }
+.empty-state span { display: grid; place-items: center; width: 52px; height: 52px; border: 1px solid #555762; border-radius: 50%; font-size: 26px; }.empty-state strong { color: #d8d9de; }.empty-state p { max-width: 320px; margin: -28px 20px 0; line-height: 1.6; }
+.project-list { display: grid; gap: 14px; }.project-card { padding: 22px; border: 1px solid #3a3b43; background: #121318; }.project-card h4 { margin: 7px 0 14px; font: 600 22px Inter, "Segoe UI", sans-serif; }.project-card > p { color: #a5a7b0; }.project-card pre { max-height: 240px; overflow: auto; padding: 16px; color: #c9cbd2; background: #0c0d10; white-space: pre-wrap; font: 12px/1.65 monospace; }
+@media (max-width: 850px) { .app-shell { padding: 20px; }.hero, .workspace-grid { grid-template-columns: 1fr; }.hero { gap: 38px; padding-top: 48px; }.panel + .panel { border-left: 0; border-top: 1px solid #303139; }.mode-badge { display: none; } }
