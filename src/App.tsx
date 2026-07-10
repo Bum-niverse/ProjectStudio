@@ -150,11 +150,11 @@ export default function App() {
 
       {page === "features" && selectedProject && (
         <section className="full-page feature-page">
-          <FeatureMap projectId={selectedProject.project.id} sourceDocumentId={selectedProject.prd.documentId} />
+          <FeatureMap projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId} />
           <div className="page-actions"><button className="secondary" onClick={() => setPage("prd")} type="button">이전: PRD</button><button onClick={() => setPage("user-flow")} type="button">다음: 유저플로우</button></div>
         </section>
       )}
-      {page === "user-flow" && selectedProject && <section className="full-page user-flow-full-page"><UserFlowPage projectId={selectedProject.project.id} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("features")} type="button">이전: 기능명세</button><button disabled type="button">다음: 와이어프레임</button></div></section>}
+      {page === "user-flow" && selectedProject && <section className="full-page user-flow-full-page"><UserFlowPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("features")} type="button">이전: 기능명세</button><button disabled type="button">다음: 와이어프레임</button></div></section>}
     </main>
   );
 }

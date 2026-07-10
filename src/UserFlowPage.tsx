@@ -7,15 +7,15 @@ import { createUserFlowSpec, type UserFlowNode, type UserFlowNodeKind } from "./
 import { UserFlowNodeCard, type UserFlowNodeData } from "./UserFlowNodeCard";
 
 const nodeTypes={userFlow:UserFlowNodeCard};
-interface Props{projectId:string;sourceDocumentId:string;}
+interface Props{projectId:string;sourceDocumentId:string;projectName?:string;}
 function FlowEditor({node,onSave,onClose}:{node:UserFlowNode;onSave:(node:UserFlowNode)=>Promise<void>;onClose:()=>void}){
   const[draft,setDraft]=useState(node);const[message,setMessage]=useState<string>();
   async function save(){try{await onSave(draft);setMessage("유저플로우 단계를 저장했습니다.");}catch{setMessage("저장하지 못했습니다. 편집 내용은 유지됩니다.");}}
   return <aside className="flow-editor"><button className="panel-close" onClick={onClose} type="button">×</button><div><p className="eyebrow">FLOW STEP DETAIL</p><h3>단계 편집</h3><small>ID {draft.id}</small><label>단계 이름<input aria-label="단계 이름" value={draft.title} onChange={event=>setDraft({...draft,title:event.target.value})}/></label><label>단계 종류<select aria-label="단계 종류" value={draft.kind} onChange={event=>setDraft({...draft,kind:event.target.value as UserFlowNodeKind})}><option value="phase">대단계</option><option value="screen">화면</option><option value="action">행동</option><option value="decision">분기</option><option value="result">결과</option></select></label><label>세부 내용<textarea aria-label="단계 세부 내용" rows={8} value={draft.description} onChange={event=>setDraft({...draft,description:event.target.value})}/></label><button onClick={()=>void save()} type="button">변경 저장</button>{message&&<p className="document-save-message">{message}</p>}</div></aside>;
 }
-export function UserFlowPage({projectId,sourceDocumentId}:Props){
+export function UserFlowPage({projectId,sourceDocumentId,projectName}:Props){
   const featureRepository=useMemo(()=>createFeatureRepository(),[]);const repository=useMemo(()=>createUserFlowRepository(),[]);
-  const generatedFeatures=useMemo(()=>createDevelopmentFeatureSpec(projectId),[projectId]);
+  const generatedFeatures=useMemo(()=>createDevelopmentFeatureSpec(projectId,projectName),[projectId,projectName]);
   const[flowNodes,setFlowNodes]=useState<UserFlowNode[]>([]);const[flowEdges,setFlowEdges]=useState<import("./domain/userFlow").UserFlowEdge[]>([]);const[lanes,setLanes]=useState<import("./domain/userFlow").UserFlowLane[]>([]);const[selectedId,setSelectedId]=useState<string>();const[message,setMessage]=useState("유저플로우를 구성하는 중…");
   useEffect(()=>{void featureRepository.initialize(projectId,sourceDocumentId,generatedFeatures).then(features=>{const generated=createUserFlowSpec(projectId,features);setLanes(generated.lanes);return repository.initialize(projectId,generated.nodes,generated.edges);}).then(spec=>{setFlowNodes(spec.nodes);setFlowEdges(spec.edges);setMessage("기능명세와 SQLite에서 유저플로우를 불러왔습니다.");}).catch(()=>setMessage("유저플로우를 불러오지 못했습니다."));},[featureRepository,generatedFeatures,projectId,repository,sourceDocumentId]);
   const nodes:Node<UserFlowNodeData>[] = flowNodes.map(node=>({id:node.id,type:"userFlow",position:{x:node.positionX,y:node.positionY},data:{node}}));

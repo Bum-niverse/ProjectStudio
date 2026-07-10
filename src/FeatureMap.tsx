@@ -31,6 +31,7 @@ function magnetize(value: number, candidates: number[]): number {
 interface FeatureMapProps {
   projectId: string;
   sourceDocumentId: string;
+  projectName?: string;
 }
 
 function layoutFeatures(features: FeatureSpec[], mode: ViewMode): FeatureNode[] {
@@ -102,9 +103,9 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode): FeatureNode[] 
   }));
 }
 
-export function FeatureMap({ projectId, sourceDocumentId }: FeatureMapProps) {
+export function FeatureMap({ projectId, sourceDocumentId, projectName }: FeatureMapProps) {
   const repository = useMemo(() => createFeatureRepository(), []);
-  const generatedFeatures = useMemo(() => createDevelopmentFeatureSpec(projectId), [projectId]);
+  const generatedFeatures = useMemo(() => createDevelopmentFeatureSpec(projectId, projectName), [projectId, projectName]);
   const [features, setFeatures] = useState(generatedFeatures);
   const [mode, setMode] = useState<WorkspaceViewMode>("document");
   const mapMode: ViewMode = mode === "mindmap" ? "mindmap" : "tree";
