@@ -27,6 +27,7 @@
 - [UI/UX 설계 및 검수 기준](docs/ui-ux-guidelines.md)
 - [로컬 데이터와 개인정보](docs/privacy.md)
 - [Windows 베타 배포 및 업데이트](docs/distribution.md)
+- [ProjectStudio Codex 스킬](.codex/skills/projectstudio-workspace/SKILL.md)
 
 ## 개발 명령
 

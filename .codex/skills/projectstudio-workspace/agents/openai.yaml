@@ -1,0 +1,7 @@
+interface:
+  display_name: "ProjectStudio 작업대"
+  short_description: "ProjectStudio 실행과 기획·개발 작업을 이어갑니다"
+  default_prompt: "Use $projectstudio-workspace to open ProjectStudio and continue the requested planning or development work."
+
+policy:
+  allow_implicit_invocation: true

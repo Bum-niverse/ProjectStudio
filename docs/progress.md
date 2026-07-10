@@ -143,5 +143,6 @@
 - 2026-07-11: 모든 GitHub CLI 인증 사용자에게 로컬 작업대 접근 허용, 소유자만 개발자 모드 유지
 - 2026-07-11: 설정에 앱 버전·로컬 데이터 폴더·SQLite 경로와 외부 도구 개인정보 안내 추가
 - 2026-07-11: 0.2.0 지인 공유 베타 NSIS·MSI 번들 설정과 수동 업데이트·SmartScreen 안내 문서 작성
+- 2026-07-11: v0.2.0 private GitHub Release에 EXE·MSI·SHA-256 업로드 및 새 채팅용 ProjectStudio Codex 스킬 추가
 
 브라우저 개발 미리보기는 `InMemoryProjectRepository`, Tauri 데스크톱 앱은 `TauriProjectRepository`를 사용한다. 첫 수직 기능의 완료 조건인 생성·편집·리비전 저장·재조회 경로를 구현했다.
