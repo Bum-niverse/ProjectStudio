@@ -10,7 +10,7 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { createDevelopmentFeatureSpec, type FeatureSpec } from "./domain/feature";
+import { createDevelopmentFeatureSpec, NODE_COLORS, type FeatureSpec, type NodeColorKey } from "./domain/feature";
 import { createFeatureRepository } from "./adapters/featureRepository";
 import { FeatureDocumentView } from "./FeatureDocumentView";
 import { FeatureEditor } from "./FeatureDocumentView";
@@ -23,7 +23,11 @@ type LayoutDensity = "default" | "compact";
 type FeatureNode = Node<FeatureNodeData>;
 const nodeTypes = { feature: FeatureNodeCard };
 const MAGNET_DISTANCE = 34;
-const FEATURE_NODE_LAYOUT_VERSION="horizontal-details-v2";
+const FEATURE_NODE_LAYOUT_VERSION="branch-spacing-v3";
+const FEATURE_BRANCH_COLOR_VERSION="branch-colors-v1";
+const BRANCH_COLORS:NodeColorKey[]=["green","cyan","amber","violet","rose","slate"];
+
+function colorFeatureBranches(features:FeatureSpec[]):FeatureSpec[]{const root=features.find(feature=>!feature.parentId);if(!root)return features;const rootId=root.id;const byId=new Map(features.map(feature=>[feature.id,feature]));const branches=features.filter(feature=>feature.parentId===rootId).sort((a,b)=>a.sortOrder-b.sortOrder);const branchColors=new Map(branches.map((branch,index)=>[branch.id,BRANCH_COLORS[index%BRANCH_COLORS.length]]));function resolve(feature:FeatureSpec):NodeColorKey{let current=feature;while(current.parentId&&current.parentId!==rootId){const parent=byId.get(current.parentId);if(!parent)break;current=parent;}return branchColors.get(current.id)??"slate";}return features.map(feature=>({...feature,colorKey:feature.id===rootId?"slate":resolve(feature)}));}
 
 function magnetize(value: number, candidates: number[]): number {
   const closest = candidates.reduce((best, candidate) => Math.abs(candidate - value) < Math.abs(best - value) ? candidate : best, value);
@@ -69,6 +73,7 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutD
   if (mode === "tree") {
     let nextLeafRow = 0;
     const placeTreeNode = (feature: FeatureSpec, depth: number): number => {
+      if(feature.parentId===root.id&&nextLeafRow>0)nextLeafRow+=density==="compact"?1.2:1.65;
       const children = childrenByParent.get(feature.id) ?? [];
       const horizontalGap=density==="compact"?285:330;
       if(children.length>1&&children.every(child=>(childrenByParent.get(child.id)??[]).length===0)){
@@ -129,21 +134,21 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
       repository.initialize(projectId, sourceDocumentId, generatedFeatures),
       repository.listPositions(projectId),
     ]).then(([storedFeatures, positions]) => {
-      setFeatures(storedFeatures);
+      const colorKey=`projectstudio:${projectId}:feature-branch-colors`;const shouldColor=localStorage.getItem(colorKey)!==FEATURE_BRANCH_COLOR_VERSION;const displayFeatures=shouldColor?colorFeatureBranches(storedFeatures):storedFeatures;setFeatures(displayFeatures);if(shouldColor)void Promise.all(displayFeatures.map(feature=>repository.updateFeature(projectId,feature))).then(()=>localStorage.setItem(colorKey,FEATURE_BRANCH_COLOR_VERSION));
       const layoutKey=`projectstudio:${projectId}:feature-node-layout`;const shouldUpgrade=localStorage.getItem(layoutKey)!==FEATURE_NODE_LAYOUT_VERSION;
-      if(shouldUpgrade){const tree=layoutFeatures(storedFeatures,"tree");const mindmap=layoutFeatures(storedFeatures,"mindmap");setPositionsByMode({tree:Object.fromEntries(tree.map(node=>[node.id,node.position])),mindmap:Object.fromEntries(mindmap.map(node=>[node.id,node.position]))});void Promise.all([...tree.map(node=>repository.savePosition({projectId,featureId:node.id,viewMode:"tree",positionX:node.position.x,positionY:node.position.y})),...mindmap.map(node=>repository.savePosition({projectId,featureId:node.id,viewMode:"mindmap",positionX:node.position.x,positionY:node.position.y}))]).then(()=>localStorage.setItem(layoutKey,FEATURE_NODE_LAYOUT_VERSION));setPersistenceMessage("넓은 노드 기준으로 정렬했습니다.");}else{setPositionsByMode({tree:Object.fromEntries(positions.filter(item=>item.viewMode==="tree").map(item=>[item.featureId,{x:item.positionX,y:item.positionY}])),mindmap:Object.fromEntries(positions.filter(item=>item.viewMode==="mindmap").map(item=>[item.featureId,{x:item.positionX,y:item.positionY}]))});setPersistenceMessage("SQLite와 동기화됨");}
+      if(shouldUpgrade){const tree=layoutFeatures(displayFeatures,"tree");const mindmap=layoutFeatures(displayFeatures,"mindmap");setPositionsByMode({tree:Object.fromEntries(tree.map(node=>[node.id,node.position])),mindmap:Object.fromEntries(mindmap.map(node=>[node.id,node.position]))});void Promise.all([...tree.map(node=>repository.savePosition({projectId,featureId:node.id,viewMode:"tree",positionX:node.position.x,positionY:node.position.y})),...mindmap.map(node=>repository.savePosition({projectId,featureId:node.id,viewMode:"mindmap",positionX:node.position.x,positionY:node.position.y}))]).then(()=>localStorage.setItem(layoutKey,FEATURE_NODE_LAYOUT_VERSION));setPersistenceMessage("대주제 색상과 그룹 간격을 적용했습니다.");}else{setPositionsByMode({tree:Object.fromEntries(positions.filter(item=>item.viewMode==="tree").map(item=>[item.featureId,{x:item.positionX,y:item.positionY}])),mindmap:Object.fromEntries(positions.filter(item=>item.viewMode==="mindmap").map(item=>[item.featureId,{x:item.positionX,y:item.positionY}]))});setPersistenceMessage("SQLite와 동기화됨");}
     }).catch(() => setPersistenceMessage("기능명세 저장소를 연결하지 못했습니다."));
   }, [generatedFeatures, projectId, repository, sourceDocumentId]);
-  const nodes = defaultNodes.map((node) => ({ ...node, selected:node.id===activeNodeId, position: positionsByMode[mapMode][node.id] ?? node.position, data: { ...node.data, onSelect:(feature:FeatureSpec)=>setActiveNodeId(current=>current===feature.id?undefined:feature.id), onAdd: handleAddFeature, onEdit: (feature:FeatureSpec)=>setSelectedFeatureId(feature.id), onDelete: handleDeleteFeature } }));
+  const rootId=features.find(feature=>!feature.parentId)?.id;const nodes = defaultNodes.map((node) => ({ ...node, selected:node.id===activeNodeId, position: positionsByMode[mapMode][node.id] ?? node.position, data: { ...node.data,isMajor:node.data.feature.parentId===rootId, onSelect:(feature:FeatureSpec)=>setActiveNodeId(current=>current===feature.id?undefined:feature.id), onAdd: handleAddFeature, onEdit: (feature:FeatureSpec)=>setSelectedFeatureId(feature.id), onDelete: handleDeleteFeature } }));
   const edges: Edge[] = features
     .filter((feature) => feature.parentId)
-    .map((feature) => ({
+    .map((feature) => {const color=NODE_COLORS.find(item=>item.key===feature.colorKey)?.color??"var(--theme-border)";return({
       id: `${feature.parentId}-${feature.id}`,
       source: feature.parentId!,
       target: feature.id,
       type: "default",
-      markerEnd: { type: MarkerType.ArrowClosed },
-    }));
+      style:{stroke:color,strokeWidth:1.4},markerEnd: { type: MarkerType.ArrowClosed,color },
+    });});
 
   function handleNodeDragStop(_: MouseEvent | TouchEvent, node: FeatureNode) {
     const otherNodes = nodes.filter((item) => item.id !== node.id);

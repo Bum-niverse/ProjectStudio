@@ -24,6 +24,7 @@
 - [개발 진행](docs/progress.md)
 - [제품 초안](docs/product-brief.md)
 - [Codex 동기화 계약](docs/codex-sync-contract.md)
+- [UI/UX 설계 및 검수 기준](docs/ui-ux-guidelines.md)
 
 ## 개발 명령
 
