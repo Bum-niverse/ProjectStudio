@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ProjectStudio development icon">
+  <rect width="512" height="512" rx="96" fill="#111216"/>
+  <path d="M112 112h288v288H112z" fill="none" stroke="#d9ff57" stroke-width="24"/>
+  <path d="M184 336V176h88c45 0 72 24 72 64s-27 64-72 64h-48v32h-40zm40-72h45c22 0 34-8 34-24s-12-24-34-24h-45v48z" fill="#d9ff57"/>
+</svg>

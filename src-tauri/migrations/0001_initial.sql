@@ -1,7 +1,3 @@
-PRAGMA foreign_keys = ON;
-
-BEGIN IMMEDIATE;
-
 CREATE TABLE projects (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL CHECK (length(trim(name)) > 0),
@@ -149,6 +145,4 @@ CREATE TABLE activity_log (
 
 CREATE INDEX idx_activity_log_project_created
     ON activity_log(project_id, created_at DESC);
-
-COMMIT;
 
