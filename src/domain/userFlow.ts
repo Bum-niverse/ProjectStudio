@@ -11,11 +11,13 @@ export function createUserFlowSpec(projectId: string, features: FeatureSpec[]): 
   const requirements = features.filter((feature) => feature.parentId === root?.id);
   const nodes: UserFlowNode[] = []; const edges: UserFlowEdge[] = [];
   const lanes = requirements.map((requirement, laneIndex) => ({ id: requirement.id, title: requirement.title, positionY: laneIndex * 230, height: 230 }));
+  let previousLaneExitId: string | undefined;
   requirements.forEach((requirement, laneIndex) => {
     const laneY = laneIndex * 230;
     const children = features.filter((feature) => feature.parentId === requirement.id);
     const phaseId = `flow-${requirement.id}`;
     nodes.push({ id: phaseId, projectId, laneId: requirement.id, title: requirement.title, description: requirement.description, kind: "phase", positionX: 120, positionY: laneY + 88 });
+    if (previousLaneExitId) edges.push({ id: `edge-${previousLaneExitId}-${phaseId}`, projectId, sourceNodeId: previousLaneExitId, targetNodeId: phaseId });
     let previousId = phaseId; let column = 1;
     children.forEach((child, childIndex) => {
       const childId = `flow-${child.id}`; const childX = 120 + column * 250;
@@ -29,6 +31,7 @@ export function createUserFlowSpec(projectId: string, features: FeatureSpec[]): 
       });
       column += details.length > 0 ? 1 : 0;
     });
+    previousLaneExitId = previousId;
   });
   return { nodes, edges, lanes };
 }

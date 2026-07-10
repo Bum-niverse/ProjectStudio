@@ -12,12 +12,14 @@ describe("createUserFlowSpec",()=>{
     expect(spec.nodes.some(node=>node.kind==="result")).toBe(true);
     expect(spec.edges.length).toBeGreaterThan(30);
   });
-  it("Globeat은 배송 운영 기능군과 흐름을 만든다",()=>{
+  it("Globeat은 장소 기반 음악 기능군과 흐름을 만든다",()=>{
     const projectId="globeat-project";const features=createDevelopmentFeatureSpec(projectId,"Globeat");const spec=createUserFlowSpec(projectId,features);
-    expect(features.some(feature=>feature.title==="배송지 엑셀/CSV 업로드 및 검증")).toBe(true);
-    expect(features.some(feature=>feature.title==="배차 후보 생성 및 확정")).toBe(true);
-    expect(features.some(feature=>feature.title==="기사 모바일 배송 링크 발송 및 수행")).toBe(true);
-    expect(spec.lanes).toHaveLength(5);
+    expect(features.some(feature=>feature.title==="3D 지구본 홈")).toBe(true);
+    expect(features.some(feature=>feature.title==="곡과 Spotify·YouTube 링크 추가")).toBe(true);
+    expect(features.some(feature=>feature.title==="플레이리스트 발견 및 외부 재생")).toBe(true);
+    expect(spec.lanes).toHaveLength(6);
     expect(spec.nodes.length).toBeGreaterThan(50);
+    const secondLaneRoot=`flow-${projectId}-explore`;
+    expect(spec.edges.some(edge=>edge.targetNodeId===secondLaneRoot)).toBe(true);
   });
 });
