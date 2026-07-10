@@ -7,8 +7,9 @@ import "./styles.css";
 import { SettingsPage } from "./SettingsPage";
 import { applyTheme, loadTheme, type ThemeId } from "./theme";
 import { UserFlowPage } from "./UserFlowPage";
+import { WireframePage } from "./WireframePage";
 
-type AppPage = "project" | "prd" | "features" | "user-flow" | "settings";
+type AppPage = "project" | "prd" | "features" | "user-flow" | "wireframe" | "settings";
 
 const STAGES = [
   { id: "project", label: "프로젝트" },
@@ -35,7 +36,7 @@ export default function App() {
   const [loadError, setLoadError] = useState<string>();
 
   const selectedProject = projects.find(({ project }) => project.id === selectedProjectId);
-  const activeStageIndex = page === "project" ? 0 : page === "prd" ? 1 : page === "features" ? 2 : page === "user-flow" ? 3 : -1;
+  const activeStageIndex = page === "project" ? 0 : page === "prd" ? 1 : page === "features" ? 2 : page === "user-flow" ? 3 : page === "wireframe" ? 4 : -1;
 
   useEffect(() => { applyTheme(theme); }, [theme]);
 
@@ -97,9 +98,9 @@ export default function App() {
         {STAGES.map((stage, index) => (
           <button
             className={index === activeStageIndex ? "active" : index < activeStageIndex ? "complete" : ""}
-            disabled={index > 3 || (index > 0 && !selectedProject)}
+            disabled={index > 4 || (index > 0 && !selectedProject)}
             key={stage.id}
-            onClick={() => index <= 3 && handleNavigate(stage.id as AppPage)}
+            onClick={() => index <= 4 && handleNavigate(stage.id as AppPage)}
             type="button"
           >
             <span>{index + 1}</span>{stage.label}
@@ -154,7 +155,8 @@ export default function App() {
           <div className="page-actions"><button className="secondary" onClick={() => setPage("prd")} type="button">이전: PRD</button><button onClick={() => setPage("user-flow")} type="button">다음: 유저플로우</button></div>
         </section>
       )}
-      {page === "user-flow" && selectedProject && <section className="full-page user-flow-full-page"><UserFlowPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("features")} type="button">이전: 기능명세</button><button disabled type="button">다음: 와이어프레임</button></div></section>}
+      {page === "user-flow" && selectedProject && <section className="full-page user-flow-full-page"><UserFlowPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("features")} type="button">이전: 기능명세</button><button onClick={()=>setPage("wireframe")} type="button">다음: 와이어프레임</button></div></section>}
+      {page === "wireframe" && selectedProject && <section className="full-page wireframe-full-page"><WireframePage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("user-flow")} type="button">이전: 유저플로우</button><button disabled type="button">다음: 개발</button></div></section>}
     </main>
   );
 }

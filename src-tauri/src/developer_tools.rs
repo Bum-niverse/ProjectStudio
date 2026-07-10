@@ -14,6 +14,7 @@ pub struct DeveloperToolsStatus {
     claude: ToolStatus,
     codex: ToolStatus,
     antigravity: ToolStatus,
+    local_llm: ToolStatus,
     git: ToolStatus,
     github_cli: ToolStatus,
     is_github_authenticated: bool,
@@ -40,6 +41,7 @@ pub async fn check_developer_tools() -> DeveloperToolsStatus {
     let claude = version_status("claude", &["--version"]);
     let codex = version_status("codex", &["--version"]);
     let antigravity = version_status("antigravity", &["--version"]);
+    let local_llm = version_status("ollama", &["--version"]);
     let git = version_status("git", &["--version"]);
     let github_cli = version_status("gh", &["--version"]);
     let is_github_authenticated = github_cli.is_installed
@@ -52,6 +54,7 @@ pub async fn check_developer_tools() -> DeveloperToolsStatus {
         claude,
         codex,
         antigravity,
+        local_llm,
         git,
         github_cli,
         is_github_authenticated,
