@@ -8,7 +8,15 @@ export interface FeatureSpec {
   description: string;
   sortOrder: number;
   acceptanceCriteria: AcceptanceCriterion[];
+  colorKey?: NodeColorKey;
 }
+
+export type NodeColorKey = "cyan" | "violet" | "green" | "amber" | "rose" | "slate";
+export const NODE_COLORS: { key: NodeColorKey; label: string; color: string }[] = [
+  { key: "cyan", label: "하늘", color: "#47c2ce" }, { key: "violet", label: "보라", color: "#8b5cf6" },
+  { key: "green", label: "초록", color: "#57b47b" }, { key: "amber", label: "노랑", color: "#d9a441" },
+  { key: "rose", label: "분홍", color: "#e66c91" }, { key: "slate", label: "회색", color: "#7c8799" },
+];
 
 export interface AcceptanceCriterion {
   id: string;

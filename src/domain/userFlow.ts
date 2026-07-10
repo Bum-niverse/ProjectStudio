@@ -1,7 +1,7 @@
-import type { FeatureSpec } from "./feature";
+import type { FeatureSpec, NodeColorKey } from "./feature";
 
 export type UserFlowNodeKind = "phase" | "screen" | "action" | "result" | "decision";
-export interface UserFlowNode { id: string; projectId: string; laneId: string; title: string; description: string; kind: UserFlowNodeKind; positionX: number; positionY: number; }
+export interface UserFlowNode { id: string; projectId: string; laneId: string; title: string; description: string; kind: UserFlowNodeKind; positionX: number; positionY: number; colorKey?: NodeColorKey; }
 export interface UserFlowEdge { id: string; projectId: string; sourceNodeId: string; targetNodeId: string; }
 export interface UserFlowLane { id: string; title: string; positionY: number; height: number; }
 export interface UserFlowSpec { nodes: UserFlowNode[]; edges: UserFlowEdge[]; lanes: UserFlowLane[]; }

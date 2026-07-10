@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import type { AcceptanceCriterion, FeatureSpec } from "./domain/feature";
+import { useMemo, useState, type CSSProperties } from "react";
+import { NODE_COLORS, type AcceptanceCriterion, type FeatureSpec } from "./domain/feature";
 
 interface FeatureDocumentViewProps {
   features: FeatureSpec[];
@@ -34,6 +34,7 @@ export function FeatureEditor({ feature, onSave }: { feature: FeatureSpec; onSav
       <label>중요도<select value={draft.priority} onChange={(event) => setDraft({ ...draft, priority: event.target.value as FeatureSpec["priority"] })}><option value="low">낮음</option><option value="medium">보통</option><option value="high">높음</option><option value="critical">핵심</option></select></label>
       <label>역할<input value={draft.role} onChange={(event) => setDraft({ ...draft, role: event.target.value })} /></label>
     </div>
+    <div className="node-color-palette" aria-label="노드 색상">{NODE_COLORS.map((color) => <button aria-label={`${color.label} 색상`} className={draft.colorKey === color.key ? "selected" : ""} key={color.key} onClick={() => setDraft({ ...draft, colorKey: color.key })} style={{ "--node-color": color.color } as CSSProperties} type="button" />)}</div>
     <label className="document-section">설명<textarea rows={5} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
     <section className="criteria-section"><div><h4>수용 기준</h4><button className="secondary" onClick={addCriterion} type="button">+ 기준 추가</button></div>
       {draft.acceptanceCriteria.map((criterion, index) => <div className="criterion-row" key={criterion.id}><input type="checkbox" checked={criterion.isMet} onChange={(event) => updateCriterion(index, { isMet: event.target.checked })} /><textarea rows={2} value={criterion.description} onChange={(event) => updateCriterion(index, { description: event.target.value })} /><button onClick={() => setDraft((current) => ({ ...current, acceptanceCriteria: current.acceptanceCriteria.filter((_, itemIndex) => itemIndex !== index) }))} type="button">×</button></div>)}

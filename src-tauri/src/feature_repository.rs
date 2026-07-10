@@ -15,6 +15,8 @@ pub struct FeatureSpec {
     role: String,
     sort_order: i64,
     acceptance_criteria: Vec<AcceptanceCriterion>,
+    #[serde(default)]
+    color_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -98,11 +100,11 @@ pub async fn initialize_feature_spec(
         .await
         .map_err(|error| error.to_string())?;
     for feature in &input.features {
-        sqlx::query("INSERT OR IGNORE INTO features (id, project_id, parent_feature_id, source_document_id, title, description, status, priority, role, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        sqlx::query("INSERT OR IGNORE INTO features (id, project_id, parent_feature_id, source_document_id, title, description, status, priority, role, sort_order, created_at, updated_at, color_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             .bind(&feature.id).bind(&input.project_id).bind(&feature.parent_id)
             .bind(&input.source_document_id).bind(&feature.title).bind(&feature.description)
             .bind(&feature.status).bind(&feature.priority).bind(&feature.role)
-            .bind(feature.sort_order).bind(&input.created_at).bind(&input.created_at)
+            .bind(feature.sort_order).bind(&input.created_at).bind(&input.created_at).bind(feature.color_key.as_deref().unwrap_or("cyan"))
             .execute(&mut *transaction).await
             .map_err(|error| format!("기능명세를 저장하지 못했습니다: {error}"))?;
     }
@@ -125,7 +127,7 @@ async fn list_features(
     connection: &mut SqliteConnection,
     project_id: &str,
 ) -> Result<Vec<FeatureSpec>, String> {
-    let rows = sqlx::query("SELECT id, parent_feature_id, title, description, status, priority, role, sort_order FROM features WHERE project_id = ? ORDER BY sort_order")
+    let rows = sqlx::query("SELECT id, parent_feature_id, title, description, status, priority, role, sort_order, color_key FROM features WHERE project_id = ? ORDER BY sort_order")
         .bind(project_id).fetch_all(&mut *connection).await.map_err(|error| error.to_string())?;
     let mut features = Vec::new();
     for row in rows {
@@ -166,6 +168,10 @@ async fn list_features(
                 .try_get("sort_order")
                 .map_err(|error| error.to_string())?,
             acceptance_criteria,
+            color_key: Some(
+                row.try_get("color_key")
+                    .map_err(|error| error.to_string())?,
+            ),
         });
     }
     Ok(features)
@@ -181,9 +187,9 @@ pub async fn update_feature(
         .begin()
         .await
         .map_err(|error| error.to_string())?;
-    let result = sqlx::query("UPDATE features SET title = ?, description = ?, status = ?, priority = ?, role = ?, updated_at = ? WHERE id = ? AND project_id = ?")
+    let result = sqlx::query("UPDATE features SET title = ?, description = ?, status = ?, priority = ?, role = ?, color_key = ?, updated_at = ? WHERE id = ? AND project_id = ?")
         .bind(&input.feature.title).bind(&input.feature.description).bind(&input.feature.status)
-        .bind(&input.feature.priority).bind(&input.feature.role).bind(&input.updated_at)
+        .bind(&input.feature.priority).bind(&input.feature.role).bind(input.feature.color_key.as_deref().unwrap_or("cyan")).bind(&input.updated_at)
         .bind(&input.feature.id).bind(&input.project_id).execute(&mut *transaction).await
         .map_err(|error| format!("기능 문서를 저장하지 못했습니다: {error}"))?;
     if result.rows_affected() != 1 {
@@ -205,6 +211,69 @@ pub async fn update_feature(
         .await
         .map_err(|error| error.to_string())?;
     Ok(input.feature)
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateFeatureInput {
+    project_id: String,
+    feature: FeatureSpec,
+    created_at: String,
+}
+
+#[tauri::command]
+pub async fn create_feature(
+    app: AppHandle,
+    input: CreateFeatureInput,
+) -> Result<Vec<FeatureSpec>, String> {
+    if input.feature.parent_id.is_none() {
+        return Err("새 기능은 부모 기능 안에 추가해야 합니다.".to_owned());
+    }
+    let mut connection = open_database(&app).await?;
+    let parent_project: Option<String> =
+        sqlx::query_scalar("SELECT project_id FROM features WHERE id = ?")
+            .bind(&input.feature.parent_id)
+            .fetch_optional(&mut connection)
+            .await
+            .map_err(|error| error.to_string())?;
+    if parent_project.as_deref() != Some(input.project_id.as_str()) {
+        return Err("같은 프로젝트의 기능 아래에만 추가할 수 있습니다.".to_owned());
+    }
+    let mut transaction = connection
+        .begin()
+        .await
+        .map_err(|error| error.to_string())?;
+    sqlx::query("INSERT INTO features (id, project_id, parent_feature_id, source_document_id, title, description, status, priority, role, sort_order, created_at, updated_at, color_key) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        .bind(&input.feature.id).bind(&input.project_id).bind(&input.feature.parent_id).bind(&input.feature.title).bind(&input.feature.description).bind(&input.feature.status).bind(&input.feature.priority).bind(&input.feature.role).bind(input.feature.sort_order).bind(&input.created_at).bind(&input.created_at).bind(input.feature.color_key.as_deref().unwrap_or("cyan")).execute(&mut *transaction).await.map_err(|error| format!("기능을 추가하지 못했습니다: {error}"))?;
+    for criterion in &input.feature.acceptance_criteria {
+        sqlx::query("INSERT INTO acceptance_criteria (id, feature_id, description, is_met, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(&criterion.id).bind(&input.feature.id).bind(&criterion.description).bind(criterion.is_met).bind(criterion.sort_order).bind(&input.created_at).bind(&input.created_at).execute(&mut *transaction).await.map_err(|error| error.to_string())?;
+    }
+    transaction
+        .commit()
+        .await
+        .map_err(|error| error.to_string())?;
+    list_features(&mut connection, &input.project_id).await
+}
+
+#[tauri::command]
+pub async fn delete_feature(
+    app: AppHandle,
+    project_id: String,
+    feature_id: String,
+) -> Result<Vec<FeatureSpec>, String> {
+    let mut connection = open_database(&app).await?;
+    let result = sqlx::query(
+        "DELETE FROM features WHERE id = ? AND project_id = ? AND parent_feature_id IS NOT NULL",
+    )
+    .bind(&feature_id)
+    .bind(&project_id)
+    .execute(&mut connection)
+    .await
+    .map_err(|error| format!("기능을 삭제하지 못했습니다: {error}"))?;
+    if result.rows_affected() != 1 {
+        return Err("루트 기능은 삭제할 수 없습니다.".to_owned());
+    }
+    list_features(&mut connection, &project_id).await
 }
 
 #[tauri::command]

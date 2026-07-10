@@ -36,6 +36,12 @@ pub fn run() {
             sql: include_str!("../migrations/0004_user_flows.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            description: "node_crud_and_colors",
+            sql: include_str!("../migrations/0005_node_crud_and_colors.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -48,6 +54,8 @@ pub fn run() {
             feature_repository::list_feature_positions,
             feature_repository::update_feature,
             feature_repository::reparent_feature,
+            feature_repository::create_feature,
+            feature_repository::delete_feature,
             feature_change_proposals::create_feature_change_proposal,
             feature_change_proposals::list_feature_change_proposals,
             feature_change_proposals::decide_feature_change_proposal,
@@ -55,7 +63,9 @@ pub fn run() {
             codex_sync::sync_project_documents,
             user_flow_repository::initialize_user_flow,
             user_flow_repository::update_user_flow_node,
-            user_flow_repository::connect_user_flow_nodes
+            user_flow_repository::connect_user_flow_nodes,
+            user_flow_repository::create_user_flow_node,
+            user_flow_repository::delete_user_flow_node
         ])
         .plugin(
             tauri_plugin_sql::Builder::default()

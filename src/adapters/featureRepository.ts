@@ -16,6 +16,8 @@ class TauriFeatureRepository implements FeatureRepository {
   reparentFeature(projectId: string, featureId: string, parentId: string) {
     return invoke<FeatureSpec[]>("reparent_feature", { input: { projectId, featureId, parentId, updatedAt: new Date().toISOString() } });
   }
+  createFeature(projectId: string, feature: FeatureSpec) { return invoke<FeatureSpec[]>("create_feature", { input: { projectId, feature, createdAt: new Date().toISOString() } }); }
+  deleteFeature(projectId: string, featureId: string) { return invoke<FeatureSpec[]>("delete_feature", { projectId, featureId }); }
 }
 
 class BrowserFeatureRepository implements FeatureRepository {
@@ -28,6 +30,8 @@ class BrowserFeatureRepository implements FeatureRepository {
   }
   async updateFeature(_projectId: string, feature: FeatureSpec) { return feature; }
   async reparentFeature(_projectId: string, featureId: string, parentId: string) { return Promise.resolve([]).then(() => { throw new Error(`브라우저 미리보기에서는 ${featureId} → ${parentId} 관계를 저장할 수 없습니다.`); }); }
+  async createFeature(_projectId: string, feature: FeatureSpec) { return [feature]; }
+  async deleteFeature() { return []; }
 }
 
 export function createFeatureRepository(): FeatureRepository {

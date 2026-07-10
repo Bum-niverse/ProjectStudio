@@ -14,6 +14,8 @@ pub struct UserFlowNode {
     kind: String,
     position_x: f64,
     position_y: f64,
+    #[serde(default)]
+    color_key: Option<String>,
 }
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -74,7 +76,7 @@ async fn list_spec(
     connection: &mut SqliteConnection,
     project_id: &str,
 ) -> Result<UserFlowSpec, String> {
-    let node_rows=sqlx::query("SELECT id, project_id, lane_id, title, description, kind, position_x, position_y FROM user_flow_nodes WHERE project_id = ? ORDER BY position_y, position_x").bind(project_id).fetch_all(&mut *connection).await.map_err(|error|error.to_string())?;
+    let node_rows=sqlx::query("SELECT id, project_id, lane_id, title, description, kind, position_x, position_y, color_key FROM user_flow_nodes WHERE project_id = ? ORDER BY position_y, position_x").bind(project_id).fetch_all(&mut *connection).await.map_err(|error|error.to_string())?;
     let nodes = node_rows
         .into_iter()
         .map(|row| {
@@ -95,6 +97,10 @@ async fn list_spec(
                 position_y: row
                     .try_get("position_y")
                     .map_err(|error| error.to_string())?,
+                color_key: Some(
+                    row.try_get("color_key")
+                        .map_err(|error| error.to_string())?,
+                ),
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
@@ -133,7 +139,7 @@ pub async fn initialize_user_flow(
         if !valid_kind(&node.kind) || node.project_id != input.project_id {
             return Err("유효하지 않은 유저플로우 노드입니다.".to_owned());
         }
-        sqlx::query("INSERT OR IGNORE INTO user_flow_nodes (id, project_id, lane_id, title, description, kind, position_x, position_y, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(&node.id).bind(&input.project_id).bind(&node.lane_id).bind(&node.title).bind(&node.description).bind(&node.kind).bind(node.position_x).bind(node.position_y).bind(&input.created_at).bind(&input.created_at).execute(&mut *transaction).await.map_err(|error|format!("유저플로우 노드를 저장하지 못했습니다: {error}"))?;
+        sqlx::query("INSERT OR IGNORE INTO user_flow_nodes (id, project_id, lane_id, title, description, kind, position_x, position_y, created_at, updated_at, color_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(&node.id).bind(&input.project_id).bind(&node.lane_id).bind(&node.title).bind(&node.description).bind(&node.kind).bind(node.position_x).bind(node.position_y).bind(&input.created_at).bind(&input.created_at).bind(node.color_key.as_deref().unwrap_or("violet")).execute(&mut *transaction).await.map_err(|error|format!("유저플로우 노드를 저장하지 못했습니다: {error}"))?;
     }
     for edge in &input.edges {
         sqlx::query("INSERT OR IGNORE INTO user_flow_edges (id, project_id, source_node_id, target_node_id, created_at) VALUES (?, ?, ?, ?, ?)").bind(&edge.id).bind(&input.project_id).bind(&edge.source_node_id).bind(&edge.target_node_id).bind(&input.created_at).execute(&mut *transaction).await.map_err(|error|format!("유저플로우 연결을 저장하지 못했습니다: {error}"))?;
@@ -154,11 +160,50 @@ pub async fn update_user_flow_node(
         return Err("노드 이름과 종류를 확인해 주세요.".to_owned());
     }
     let mut connection = open_database(&app).await?;
-    let result=sqlx::query("UPDATE user_flow_nodes SET title=?, description=?, kind=?, position_x=?, position_y=?, updated_at=? WHERE id=? AND project_id=?").bind(input.node.title.trim()).bind(&input.node.description).bind(&input.node.kind).bind(input.node.position_x).bind(input.node.position_y).bind(&input.updated_at).bind(&input.node.id).bind(&input.node.project_id).execute(&mut connection).await.map_err(|error|error.to_string())?;
+    let result=sqlx::query("UPDATE user_flow_nodes SET title=?, description=?, kind=?, position_x=?, position_y=?, color_key=?, updated_at=? WHERE id=? AND project_id=?").bind(input.node.title.trim()).bind(&input.node.description).bind(&input.node.kind).bind(input.node.position_x).bind(input.node.position_y).bind(input.node.color_key.as_deref().unwrap_or("violet")).bind(&input.updated_at).bind(&input.node.id).bind(&input.node.project_id).execute(&mut connection).await.map_err(|error|error.to_string())?;
     if result.rows_affected() != 1 {
         return Err("저장할 유저플로우 노드를 찾지 못했습니다.".to_owned());
     }
     Ok(input.node)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateNodeInput {
+    node: UserFlowNode,
+    created_at: String,
+}
+
+#[tauri::command]
+pub async fn create_user_flow_node(
+    app: AppHandle,
+    input: CreateNodeInput,
+) -> Result<UserFlowNode, String> {
+    if input.node.title.trim().is_empty() || !valid_kind(&input.node.kind) {
+        return Err("노드 이름과 종류를 확인해 주세요.".to_owned());
+    }
+    let mut connection = open_database(&app).await?;
+    sqlx::query("INSERT INTO user_flow_nodes (id, project_id, lane_id, title, description, kind, position_x, position_y, created_at, updated_at, color_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(&input.node.id).bind(&input.node.project_id).bind(&input.node.lane_id).bind(&input.node.title).bind(&input.node.description).bind(&input.node.kind).bind(input.node.position_x).bind(input.node.position_y).bind(&input.created_at).bind(&input.created_at).bind(input.node.color_key.as_deref().unwrap_or("violet")).execute(&mut connection).await.map_err(|error|format!("유저플로우 노드를 추가하지 못했습니다: {error}"))?;
+    Ok(input.node)
+}
+
+#[tauri::command]
+pub async fn delete_user_flow_node(
+    app: AppHandle,
+    project_id: String,
+    node_id: String,
+) -> Result<(), String> {
+    let mut connection = open_database(&app).await?;
+    let result = sqlx::query("DELETE FROM user_flow_nodes WHERE id=? AND project_id=?")
+        .bind(node_id)
+        .bind(project_id)
+        .execute(&mut connection)
+        .await
+        .map_err(|error| format!("유저플로우 노드를 삭제하지 못했습니다: {error}"))?;
+    if result.rows_affected() != 1 {
+        return Err("삭제할 유저플로우 노드를 찾지 못했습니다.".to_owned());
+    }
+    Ok(())
 }
 
 #[tauri::command]
