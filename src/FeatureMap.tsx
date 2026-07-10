@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Background,
   Controls,
@@ -10,12 +10,14 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { createDevelopmentFeatureSpec, type FeatureSpec } from "./domain/feature";
+import { createFeatureRepository } from "./adapters/featureRepository";
 
 type ViewMode = "tree" | "mindmap";
 type FeatureNode = Node<{ feature: FeatureSpec; label: string }>;
 
 interface FeatureMapProps {
   projectId: string;
+  sourceDocumentId: string;
 }
 
 function layoutFeatures(features: FeatureSpec[], mode: ViewMode): FeatureNode[] {
@@ -58,22 +60,28 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode): FeatureNode[] 
   }));
 }
 
-function loadPositions(projectId: string, mode: ViewMode): Record<string, { x: number; y: number }> {
-  try {
-    return JSON.parse(localStorage.getItem(`projectstudio:${projectId}:${mode}:positions`) ?? "{}");
-  } catch {
-    return {};
-  }
-}
-
-export function FeatureMap({ projectId }: FeatureMapProps) {
-  const features = useMemo(() => createDevelopmentFeatureSpec(projectId), [projectId]);
+export function FeatureMap({ projectId, sourceDocumentId }: FeatureMapProps) {
+  const repository = useMemo(() => createFeatureRepository(), []);
+  const generatedFeatures = useMemo(() => createDevelopmentFeatureSpec(projectId), [projectId]);
+  const [features, setFeatures] = useState(generatedFeatures);
   const [mode, setMode] = useState<ViewMode>("tree");
   const defaultNodes = useMemo(() => layoutFeatures(features, mode), [features, mode]);
-  const [positionsByMode, setPositionsByMode] = useState<Record<ViewMode, Record<string, { x: number; y: number }>>>(() => ({
-    tree: loadPositions(projectId, "tree"),
-    mindmap: loadPositions(projectId, "mindmap"),
-  }));
+  const [positionsByMode, setPositionsByMode] = useState<Record<ViewMode, Record<string, { x: number; y: number }>>>({ tree: {}, mindmap: {} });
+  const [persistenceMessage, setPersistenceMessage] = useState("기능명세를 불러오는 중…");
+
+  useEffect(() => {
+    void Promise.all([
+      repository.initialize(projectId, sourceDocumentId, generatedFeatures),
+      repository.listPositions(projectId),
+    ]).then(([storedFeatures, positions]) => {
+      setFeatures(storedFeatures);
+      setPositionsByMode({
+        tree: Object.fromEntries(positions.filter((item) => item.viewMode === "tree").map((item) => [item.featureId, { x: item.positionX, y: item.positionY }])),
+        mindmap: Object.fromEntries(positions.filter((item) => item.viewMode === "mindmap").map((item) => [item.featureId, { x: item.positionX, y: item.positionY }])),
+      });
+      setPersistenceMessage("SQLite와 동기화됨");
+    }).catch(() => setPersistenceMessage("기능명세 저장소를 연결하지 못했습니다."));
+  }, [generatedFeatures, projectId, repository, sourceDocumentId]);
   const nodes = defaultNodes.map((node) => ({ ...node, position: positionsByMode[mode][node.id] ?? node.position }));
   const edges: Edge[] = features
     .filter((feature) => feature.parentId)
@@ -88,15 +96,17 @@ export function FeatureMap({ projectId }: FeatureMapProps) {
   const handleNodeDragStop = useCallback((_: MouseEvent | TouchEvent, node: FeatureNode) => {
     setPositionsByMode((current) => {
       const updated = { ...current[mode], [node.id]: node.position };
-      localStorage.setItem(`projectstudio:${projectId}:${mode}:positions`, JSON.stringify(updated));
+      void repository.savePosition({ projectId, featureId: node.id, viewMode: mode, positionX: node.position.x, positionY: node.position.y })
+        .then(() => setPersistenceMessage("노드 위치 저장됨"))
+        .catch(() => setPersistenceMessage("노드 위치를 저장하지 못했습니다."));
       return { ...current, [mode]: updated };
     });
-  }, [mode, projectId]);
+  }, [mode, projectId, repository]);
 
   return (
     <section className="feature-map-section">
       <div className="feature-map-header">
-        <div><p className="eyebrow">FEATURE SPECIFICATION</p><h5>계층형 기능명세</h5></div>
+        <div><p className="eyebrow">FEATURE SPECIFICATION</p><h5>계층형 기능명세</h5><small>{persistenceMessage}</small></div>
         <div className="view-switch" aria-label="기능명세 보기 방식">
           <button className={mode === "tree" ? "selected" : ""} onClick={() => setMode("tree")} type="button">트리</button>
           <button className={mode === "mindmap" ? "selected" : ""} onClick={() => setMode("mindmap")} type="button">마인드맵</button>

@@ -1,3 +1,4 @@
+mod feature_repository;
 mod project_repository;
 
 use tauri_plugin_sql::{Migration, MigrationKind};
@@ -6,18 +7,29 @@ const DATABASE_URL: &str = "sqlite:projectstudio.db";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let migrations = vec![Migration {
-        version: 1,
-        description: "initial_projectstudio_schema",
-        sql: include_str!("../migrations/0001_initial.sql"),
-        kind: MigrationKind::Up,
-    }];
+    let migrations = vec![
+        Migration {
+            version: 1,
+            description: "initial_projectstudio_schema",
+            sql: include_str!("../migrations/0001_initial.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "feature_view_positions",
+            sql: include_str!("../migrations/0002_feature_view_positions.sql"),
+            kind: MigrationKind::Up,
+        },
+    ];
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             project_repository::save_project_with_initial_prd,
             project_repository::list_projects,
-            project_repository::save_prd_revision
+            project_repository::save_prd_revision,
+            feature_repository::initialize_feature_spec,
+            feature_repository::save_feature_position,
+            feature_repository::list_feature_positions
         ])
         .plugin(
             tauri_plugin_sql::Builder::default()

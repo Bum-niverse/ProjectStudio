@@ -124,7 +124,7 @@ export default function App() {
                     revision={prd}
                     onSave={(contentMarkdown) => handleSavePrd(project.id, contentMarkdown)}
                   />
-                  <FeatureMap projectId={project.id} />
+                  <FeatureMap projectId={project.id} sourceDocumentId={prd.documentId} />
                 </article>
               ))}
             </div>
