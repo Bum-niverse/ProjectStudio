@@ -74,4 +74,6 @@ LLM 도구는 `CLAUDE CLI`, `CODEX CLI`, `ANTIGRAVITY`, `로컬 LLM · OLLAMA` �
 
 Codex가 연결된 상태에서 Codex 생성 도구를 선택하면 로컬 규칙 초안을 만들지 않고 선택한 유저플로우 페이지의 ID·제목·설명, 디바이스와 추가 요청만 Codex CLI로 전송한다. Codex는 페이지별 요약과 navigation·hero·search·form·cards·list·detail·actions 블록을 구조화 JSON으로 반환하며 ProjectStudio는 페이지 수, 원본 ID와 최소 블록 수를 검증한 뒤 와이어프레임 화면으로 렌더링한다. 실행은 읽기 전용·임시 세션·사용자 설정 및 저장소 규칙 무시 모드로 제한하고 3분 뒤 중단한다.
 
+각 Codex 블록은 이름만 나열하지 않고 데스크톱 1440×900 또는 모바일 390×844 캔버스의 x·y·width·height 좌표를 포함한다. ProjectStudio는 좌표 범위를 검증한 뒤 헤더, 검색 입력, 이미지·지도 자리, 지표 카드, 폼, 표·목록, 상세 패널과 주요 버튼 형태의 저충실도 UI를 실제 한 화면 배치로 그린다.
+
 6단계는 개발 작업대 대신 내보내기와 LLM 전달을 담당한다. 프로젝트 개요, PRD, 기능명세·수용 기준과 유저플로우의 포함 범위를 선택하고 CSV 묶음, A4 PDF 기획 보고서와 Markdown 프로젝트 문맥을 지정한 로컬 폴더에 생성한다. Codex·Claude·Antigravity·범용 LLM마다 `project-context.md`를 먼저 읽고 불일치 확인, 영향 범위 분석, 변경 파일·검증 계획, 테스트 결과를 보고하도록 실행 프롬프트를 별도 Markdown으로 만든다. PDF 생성은 로컬 Windows 인쇄 엔진을 사용하며 외부 서버로 문서를 전송하지 않는다.

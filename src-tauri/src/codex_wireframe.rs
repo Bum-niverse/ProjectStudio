@@ -28,6 +28,10 @@ pub struct GenerateInput {
 pub struct GeneratedBlock {
     kind: String,
     label: String,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
 }
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -42,7 +46,7 @@ struct GeneratedEnvelope {
     pages: Vec<GeneratedPage>,
 }
 fn schema() -> &'static str {
-    r#"{"type":"object","additionalProperties":false,"required":["pages"],"properties":{"pages":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["sourceNodeId","title","summary","blocks"],"properties":{"sourceNodeId":{"type":"string"},"title":{"type":"string"},"summary":{"type":"string"},"blocks":{"type":"array","minItems":2,"maxItems":8,"items":{"type":"object","additionalProperties":false,"required":["kind","label"],"properties":{"kind":{"type":"string","enum":["navigation","hero","search","form","cards","list","detail","actions"]},"label":{"type":"string"}}}}}}}}}"#
+    r#"{"type":"object","additionalProperties":false,"required":["pages"],"properties":{"pages":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["sourceNodeId","title","summary","blocks"],"properties":{"sourceNodeId":{"type":"string"},"title":{"type":"string"},"summary":{"type":"string"},"blocks":{"type":"array","minItems":2,"maxItems":10,"items":{"type":"object","additionalProperties":false,"required":["kind","label","x","y","width","height"],"properties":{"kind":{"type":"string","enum":["navigation","hero","search","form","cards","list","detail","actions"]},"label":{"type":"string"},"x":{"type":"number","minimum":0},"y":{"type":"number","minimum":0},"width":{"type":"number","exclusiveMinimum":0},"height":{"type":"number","exclusiveMinimum":0}}}}}}}}}"#
 }
 fn validate(
     input: &GenerateInput,
@@ -64,6 +68,16 @@ fn validate(
         };
         if page.title.trim().is_empty() || page.summary.trim().is_empty() || page.blocks.len() < 2 {
             return Err("Codex 와이어프레임 결과가 비어 있습니다.".to_owned());
+        }
+        let (canvas_width, canvas_height) = if input.device == "desktop" {
+            (1440.0, 900.0)
+        } else {
+            (390.0, 844.0)
+        };
+        if page.blocks.iter().any(|block| {
+            block.x + block.width > canvas_width || block.y + block.height > canvas_height
+        }) {
+            return Err("Codex 와이어프레임 블록이 화면 범위를 벗어났습니다.".to_owned());
         }
     }
     Ok(result.pages)
@@ -102,7 +116,12 @@ pub async fn generate_wireframes_with_codex(
         })
         .collect::<Vec<_>>()
         .join("\n");
-    let prompt=format!("ProjectStudio에서 실제 구현 전 모습을 확인할 저충실도 와이어프레임을 설계하라. 코드를 작성하거나 파일을 읽지 말고 제공된 문맥만 사용한다. 프로젝트: {}. 디바이스: {}. 각 페이지마다 사용자가 목적을 달성하는 데 필요한 화면 영역을 2~8개 블록으로 제안하고 원래 sourceNodeId를 그대로 반환한다. 장식보다 정보 계층, 입력, 탐색, 상태, 주요 행동을 구체적으로 표현한다. 추가 요청: {}\n\n선택 페이지:\n{}",input.project_name,input.device,if input.additional_request.trim().is_empty(){"없음"}else{input.additional_request.trim()},page_context);
+    let canvas = if input.device == "desktop" {
+        "1440x900"
+    } else {
+        "390x844"
+    };
+    let prompt=format!("ProjectStudio에서 실제 구현 전 모습을 한눈에 확인할 저충실도 와이어프레임을 설계하라. 코드를 작성하거나 파일을 읽지 말고 제공된 문맥만 사용한다. 프로젝트: {}. 디바이스: {}, 캔버스: {}. 각 페이지를 완성된 단일 화면처럼 구성한다. 헤더·사이드바·검색·지표 카드·목록·표·차트 자리·상세 패널·주요 버튼 중 필요한 요소를 2~10개 블록으로 나누고 각 블록의 x,y,width,height 픽셀 좌표를 캔버스 안에서 겹치지 않게 지정한다. label에는 실제 화면에서 보일 기능과 내용을 구체적으로 쓴다. 원래 sourceNodeId를 그대로 반환한다. 추가 요청: {}\n\n선택 페이지:\n{}",input.project_name,input.device,canvas,if input.additional_request.trim().is_empty(){"없음"}else{input.additional_request.trim()},page_context);
     let mut child = Command::new(program)
         .args([
             "exec",
