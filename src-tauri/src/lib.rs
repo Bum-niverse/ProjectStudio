@@ -1,5 +1,6 @@
 mod codex_sync;
 mod developer_tools;
+mod feature_change_proposals;
 mod feature_repository;
 mod project_repository;
 
@@ -22,6 +23,12 @@ pub fn run() {
             sql: include_str!("../migrations/0002_feature_view_positions.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 3,
+            description: "feature_change_proposals",
+            sql: include_str!("../migrations/0003_feature_change_proposals.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -34,6 +41,9 @@ pub fn run() {
             feature_repository::list_feature_positions,
             feature_repository::update_feature,
             feature_repository::reparent_feature,
+            feature_change_proposals::create_feature_change_proposal,
+            feature_change_proposals::list_feature_change_proposals,
+            feature_change_proposals::decide_feature_change_proposal,
             developer_tools::check_developer_tools,
             codex_sync::sync_project_documents
         ])

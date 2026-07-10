@@ -2,7 +2,7 @@
 
 ## 현재 단계
 
-프로젝트 생성부터 PRD, 편집 가능한 기능명세 Document/Tree/Mind map과 Codex용 로컬 문서 동기화까지 연결했다. 다음 단계는 AI 변경안 비교·승인·거절의 최소 흐름이다.
+프로젝트 생성부터 PRD, 편집 가능한 기능명세, Codex용 로컬 문서 동기화와 AI 변경안 비교·승인·거절까지 연결했다. 다음 단계는 유저플로우 생성·편집의 첫 수직 흐름이다.
 
 ## 완료
 
@@ -41,7 +41,7 @@
 - [x] 네 가지 앱 테마와 설정 유지
 - [x] Codex·Git·GitHub CLI 로컬 상태 확인과 저장소 설정
 - [x] `.projectstudio` 기능 문서·manifest·최신 변경 목록 동기화
-- [ ] AI 변경안 비교·승인·거절의 최소 흐름
+- [x] AI 변경안 비교·승인·거절의 최소 흐름
 
 ## 검증 기록
 
@@ -75,5 +75,8 @@
 - 2026-07-10: Pure Black·Light·Neutral Gray·VS Code Dark 테마와 설정 페이지 추가
 - 2026-07-10: Codex·Git·GitHub CLI 설치 및 GitHub CLI 인증 상태 로컬 확인 추가
 - 2026-07-10: 연결 Git 저장소에 `.projectstudio` Markdown·JSON 동기화 명령 구현
+- 2026-07-10: 기능명세 원본·제안 스냅샷과 승인 상태 SQLite 마이그레이션 3 추가
+- 2026-07-10: 설명·메타데이터·수용 기준 전후 비교와 승인·거절 UI 구현
+- 2026-07-10: 승인 시 원자적 기능 반영, 오래된 제안 차단과 승인·거절 활동 기록 연결
 
 브라우저 개발 미리보기는 `InMemoryProjectRepository`, Tauri 데스크톱 앱은 `TauriProjectRepository`를 사용한다. 첫 수직 기능의 완료 조건인 생성·편집·리비전 저장·재조회 경로를 구현했다.

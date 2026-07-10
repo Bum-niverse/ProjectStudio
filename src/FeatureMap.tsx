@@ -15,6 +15,7 @@ import { createFeatureRepository } from "./adapters/featureRepository";
 import { FeatureDocumentView } from "./FeatureDocumentView";
 import { FeatureEditor } from "./FeatureDocumentView";
 import { FeatureNodeCard, type FeatureNodeData } from "./FeatureNodeCard";
+import { FeatureProposalPanel } from "./FeatureProposalPanel";
 
 type ViewMode = "tree" | "mindmap";
 type WorkspaceViewMode = "document" | ViewMode;
@@ -111,6 +112,7 @@ export function FeatureMap({ projectId, sourceDocumentId }: FeatureMapProps) {
   const [positionsByMode, setPositionsByMode] = useState<Record<ViewMode, Record<string, { x: number; y: number }>>>({ tree: {}, mindmap: {} });
   const [persistenceMessage, setPersistenceMessage] = useState("기능명세를 불러오는 중…");
   const [selectedFeatureId, setSelectedFeatureId] = useState<string>();
+  const [isProposalPanelOpen, setIsProposalPanelOpen] = useState(false);
 
   useEffect(() => {
     void Promise.all([
@@ -156,6 +158,11 @@ export function FeatureMap({ projectId, sourceDocumentId }: FeatureMapProps) {
     setFeatures((current) => current.map((item) => item.id === saved.id ? saved : item));
   }
 
+  function handleAcceptedProposal(feature: FeatureSpec) {
+    setFeatures((current) => current.map((item) => item.id === feature.id ? feature : item));
+    setPersistenceMessage("승인한 AI 변경안을 기능명세에 반영했습니다.");
+  }
+
   async function handleConnect(connection: Connection) {
     if (!connection.source || !connection.target) return;
     try {
@@ -186,6 +193,7 @@ export function FeatureMap({ projectId, sourceDocumentId }: FeatureMapProps) {
           <button className={mode === "tree" ? "selected" : ""} onClick={() => setMode("tree")} type="button">트리</button>
           <button className={mode === "mindmap" ? "selected" : ""} onClick={() => setMode("mindmap")} type="button">마인드맵</button>
           {mode !== "document" && <button onClick={handleResetLayout} type="button">기본 정렬</button>}
+          <button className="proposal-open-button" onClick={() => setIsProposalPanelOpen(true)} type="button">AI 변경안</button>
         </div>
       </div>
       {mode === "document" ? <FeatureDocumentView features={features} onSave={handleSaveFeature} /> : <div className="feature-canvas" data-view-mode={mode}>
@@ -196,6 +204,7 @@ export function FeatureMap({ projectId, sourceDocumentId }: FeatureMapProps) {
         </ReactFlow>
         {selectedFeature && <aside className="node-document-panel"><button className="panel-close" onClick={() => setSelectedFeatureId(undefined)} type="button">×</button><FeatureEditor key={selectedFeature.id} feature={selectedFeature} onSave={handleSaveFeature} /></aside>}
       </div>}
+      <FeatureProposalPanel projectId={projectId} features={features} isOpen={isProposalPanelOpen} onClose={() => setIsProposalPanelOpen(false)} onAccepted={handleAcceptedProposal} />
     </section>
   );
 }

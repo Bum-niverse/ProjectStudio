@@ -49,3 +49,5 @@ Tree와 Mind map의 모든 노드는 왼쪽 입력점과 오른쪽 출력점을 
 Codex 연동 산출물은 연결된 저장소의 `.projectstudio` 아래에 안정적인 ID 기반 Markdown과 JSON으로 기록하고 마지막 저장 이후 변경 항목은 `changes/latest.json`으로 제공한다. 상세 계약은 [Codex 동기화 계약](codex-sync-contract.md)에 정의한다.
 
 설정 페이지는 Pure Black, Light, Neutral Gray, VS Code Dark의 네 가지 테마를 제공하고 선택을 이 컴퓨터에 유지한다. Codex·Git·GitHub CLI의 설치 및 GitHub CLI 인증 상태를 로컬에서 확인하며 토큰이나 계정 응답은 저장하지 않는다. 프로젝트별 로컬 Git 저장소와 GitHub 원격 주소를 지정하고 사용자가 명시적으로 동기화할 때만 `.projectstudio` 문서를 쓴다.
+
+기능명세의 AI 변경안은 현재 기능 스냅샷과 제안 스냅샷을 별도로 보존한다. 사용자는 설명·상태·중요도·역할·수용 기준의 전후 내용을 비교하고 승인 또는 거절한다. 승인 전에 원본을 수정하지 않으며, 변경안 생성 이후 원본이 수정된 경우 오래된 변경안 승인을 차단한다. 승인·거절 결과와 거절 사유는 활동 기록에 남긴다. 실제 AI 공급자 연결 전에는 외부 전송이 없는 개발 모드 제안만 생성한다.
