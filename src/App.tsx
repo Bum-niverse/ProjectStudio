@@ -5,6 +5,8 @@ import { PrdEditor } from "./PrdEditor";
 import { FeatureMap } from "./FeatureMap";
 import "./styles.css";
 
+type WorkspaceStage = "prd" | "features" | "user-flow" | "wireframe" | "development";
+
 export default function App() {
   const service = useMemo(() => createProjectService(), []);
   const [projects, setProjects] = useState<ProjectWithPrd[]>([]);
@@ -15,6 +17,10 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string>();
   const [loadError, setLoadError] = useState<string>();
+  const [stageByProject, setStageByProject] = useState<Record<string, WorkspaceStage>>({});
+  const currentProgressIndex = projects.length === 0
+    ? 0
+    : Object.values(stageByProject).includes("features") ? 2 : 1;
 
   useEffect(() => {
     void service
@@ -33,6 +39,7 @@ export default function App() {
     try {
       const created = await service.createProject({ name, idea });
       setProjects((current) => [created, ...current]);
+      setStageByProject((current) => ({ ...current, [created.project.id]: "prd" }));
       setName("");
       setIdea("");
     } catch (error) {
@@ -70,8 +77,8 @@ export default function App() {
           <p>기획 문서와 코드, 커밋, 테스트가 어디까지 이어졌는지 한곳에서 추적합니다.</p>
         </div>
         <div className="progress-track" aria-label="제품 개발 단계">
-          {["아이디어", "PRD", "기능명세", "개발", "완료"].map((step, index) => (
-            <div className={index === 0 ? "step active" : "step"} key={step}>
+          {["프로젝트", "PRD", "기능명세", "유저플로우", "와이어프레임", "개발"].map((step, index) => (
+            <div className={index === currentProgressIndex ? "step active" : "step"} key={step}>
               <span>{index + 1}</span>{step}
             </div>
           ))}
@@ -118,13 +125,38 @@ export default function App() {
             <div className="project-list">
               {projects.map(({ project, prd }) => (
                 <article className="project-card" key={project.id}>
-                  <div><p className="eyebrow">PRD · REV {prd.revisionNumber}</p><h4>{project.name}</h4></div>
+                  <div><p className="eyebrow">PROJECT WORKSPACE</p><h4>{project.name}</h4></div>
                   <p>{project.idea}</p>
-                  <PrdEditor
-                    revision={prd}
-                    onSave={(contentMarkdown) => handleSavePrd(project.id, contentMarkdown)}
-                  />
-                  <FeatureMap projectId={project.id} sourceDocumentId={prd.documentId} />
+                  <nav className="workspace-stages" aria-label={`${project.name} 작업 단계`}>
+                    {[
+                      ["prd", "2. PRD"],
+                      ["features", "3. 기능명세"],
+                      ["user-flow", "4. 유저플로우"],
+                      ["wireframe", "5. 와이어프레임"],
+                      ["development", "6. 개발"],
+                    ].map(([stage, label], index) => (
+                      <button
+                        className={(stageByProject[project.id] ?? "prd") === stage ? "active" : ""}
+                        disabled={index > 1}
+                        key={stage}
+                        onClick={() => setStageByProject((current) => ({ ...current, [project.id]: stage as WorkspaceStage }))}
+                        type="button"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </nav>
+                  {(stageByProject[project.id] ?? "prd") === "prd" && (
+                    <section className="workspace-stage-content">
+                      <div className="stage-heading"><span>02</span><div><p className="eyebrow">PRODUCT REQUIREMENTS</p><h5>PRD · REV {prd.revisionNumber}</h5></div></div>
+                      <PrdEditor revision={prd} onSave={(contentMarkdown) => handleSavePrd(project.id, contentMarkdown)} />
+                    </section>
+                  )}
+                  {(stageByProject[project.id] ?? "prd") === "features" && (
+                    <section className="workspace-stage-content">
+                      <FeatureMap projectId={project.id} sourceDocumentId={prd.documentId} />
+                    </section>
+                  )}
                 </article>
               ))}
             </div>

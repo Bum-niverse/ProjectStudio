@@ -106,7 +106,7 @@ export function FeatureMap({ projectId, sourceDocumentId }: FeatureMapProps) {
   return (
     <section className="feature-map-section">
       <div className="feature-map-header">
-        <div><p className="eyebrow">FEATURE SPECIFICATION</p><h5>계층형 기능명세</h5><small>{persistenceMessage}</small></div>
+        <div><p className="eyebrow">03 · FEATURE SPECIFICATION</p><h5>기능명세</h5><small>{persistenceMessage}</small></div>
         <div className="view-switch" aria-label="기능명세 보기 방식">
           <button className={mode === "tree" ? "selected" : ""} onClick={() => setMode("tree")} type="button">트리</button>
           <button className={mode === "mindmap" ? "selected" : ""} onClick={() => setMode("mindmap")} type="button">마인드맵</button>
