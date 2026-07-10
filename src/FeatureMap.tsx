@@ -129,7 +129,7 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
       setPersistenceMessage("SQLite와 동기화됨");
     }).catch(() => setPersistenceMessage("기능명세 저장소를 연결하지 못했습니다."));
   }, [generatedFeatures, projectId, repository, sourceDocumentId]);
-  const nodes = defaultNodes.map((node) => ({ ...node, selected:node.id===activeNodeId, position: positionsByMode[mapMode][node.id] ?? node.position, data: { ...node.data, onSelect:(feature:FeatureSpec)=>setActiveNodeId(feature.id), onAdd: handleAddFeature, onEdit: (feature:FeatureSpec)=>setSelectedFeatureId(feature.id), onDelete: handleDeleteFeature } }));
+  const nodes = defaultNodes.map((node) => ({ ...node, selected:node.id===activeNodeId, position: positionsByMode[mapMode][node.id] ?? node.position, data: { ...node.data, onSelect:(feature:FeatureSpec)=>setActiveNodeId(current=>current===feature.id?undefined:feature.id), onAdd: handleAddFeature, onEdit: (feature:FeatureSpec)=>setSelectedFeatureId(feature.id), onDelete: handleDeleteFeature } }));
   const edges: Edge[] = features
     .filter((feature) => feature.parentId)
     .map((feature) => ({
@@ -209,7 +209,7 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
         </div>
       </div>
       {mode === "document" ? <FeatureDocumentView features={features} onSave={handleSaveFeature} /> : <div className="feature-canvas" data-view-mode={mode}>
-        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onNodeClick={(_,node)=>setActiveNodeId(node.id)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.18, duration: 350, maxZoom: 0.9 }} minZoom={0.25} maxZoom={1.8} panOnScroll>
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.18, duration: 350, maxZoom: 0.9 }} minZoom={0.25} maxZoom={1.8} panOnScroll>
           <Background color="#343741" gap={24} size={1} />
           <MiniMap pannable zoomable />
           <Controls showInteractive={false} />
