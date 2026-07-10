@@ -1,28 +1,26 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { DevelopmentPrdGenerator } from "./adapters/developmentPrdGenerator";
-import { InMemoryProjectRepository } from "./adapters/inMemoryProjectRepository";
-import { ProjectService } from "./application/projectService";
+import { createProjectService } from "./application/createProjectService";
 import { ProjectValidationError, type ProjectValidationErrors, type ProjectWithPrd } from "./domain/project";
+import { PrdEditor } from "./PrdEditor";
 import "./styles.css";
 
 export default function App() {
-  const service = useMemo(
-    () =>
-      new ProjectService({
-        repository: new InMemoryProjectRepository(),
-        prdGenerator: new DevelopmentPrdGenerator(),
-      }),
-    [],
-  );
+  const service = useMemo(() => createProjectService(), []);
   const [projects, setProjects] = useState<ProjectWithPrd[]>([]);
   const [name, setName] = useState("");
   const [idea, setIdea] = useState("");
   const [errors, setErrors] = useState<ProjectValidationErrors>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string>();
+  const [loadError, setLoadError] = useState<string>();
 
   useEffect(() => {
-    void service.listProjects().then(setProjects);
+    void service
+      .listProjects()
+      .then(setProjects)
+      .catch(() => setLoadError("저장된 프로젝트를 불러오지 못했습니다. 앱을 다시 시작해 주세요."))
+      .finally(() => setIsLoading(false));
   }, [service]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -42,6 +40,15 @@ export default function App() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleSavePrd(projectId: string, contentMarkdown: string) {
+    const current = projects.find(({ project }) => project.id === projectId);
+    if (!current) throw new Error("프로젝트를 찾을 수 없습니다.");
+    const prd = await service.savePrdRevision(current.prd, contentMarkdown);
+    setProjects((items) =>
+      items.map((item) => (item.project.id === projectId ? { ...item, prd } : item)),
+    );
   }
 
   return (
@@ -91,7 +98,16 @@ export default function App() {
         <section className="panel project-panel">
           <p className="panel-number">02</p>
           <h3>프로젝트 작업대</h3>
-          {projects.length === 0 ? (
+          {isLoading ? (
+            <div className="empty-state" aria-live="polite">
+              <strong>프로젝트를 불러오는 중입니다…</strong>
+            </div>
+          ) : loadError ? (
+            <div className="empty-state error-state" role="alert">
+              <strong>프로젝트를 열 수 없습니다.</strong>
+              <p>{loadError}</p>
+            </div>
+          ) : projects.length === 0 ? (
             <div className="empty-state">
               <span>+</span>
               <strong>아직 프로젝트가 없습니다.</strong>
@@ -103,7 +119,10 @@ export default function App() {
                 <article className="project-card" key={project.id}>
                   <div><p className="eyebrow">PRD · REV {prd.revisionNumber}</p><h4>{project.name}</h4></div>
                   <p>{project.idea}</p>
-                  <pre>{prd.contentMarkdown}</pre>
+                  <PrdEditor
+                    revision={prd}
+                    onSave={(contentMarkdown) => handleSavePrd(project.id, contentMarkdown)}
+                  />
                 </article>
               ))}
             </div>

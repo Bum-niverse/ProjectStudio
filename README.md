@@ -33,6 +33,6 @@ pnpm build
 pnpm tauri dev
 ```
 
-현재 브라우저 개발 미리보기는 메모리 저장소를 사용합니다. Tauri 네이티브 셸과 SQLite 연결 후 로컬 영속 저장으로 교체합니다.
+브라우저 개발 미리보기는 메모리 저장소를 사용하고, Tauri 데스크톱 앱은 SQLite에 프로젝트와 PRD를 영속 저장합니다.
 
 Rust 버전과 필수 컴포넌트는 `rust-toolchain.toml`에 고정되어 있습니다. Tauri 실행 시 SQLite 데이터베이스는 운영체제의 앱 데이터 디렉터리에 생성됩니다.

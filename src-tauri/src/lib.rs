@@ -1,3 +1,5 @@
+mod project_repository;
+
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 const DATABASE_URL: &str = "sqlite:projectstudio.db";
@@ -12,6 +14,11 @@ pub fn run() {
     }];
 
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![
+            project_repository::save_project_with_initial_prd,
+            project_repository::list_projects,
+            project_repository::save_prd_revision
+        ])
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations(DATABASE_URL, migrations)

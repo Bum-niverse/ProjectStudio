@@ -4,8 +4,6 @@
   "description": "ProjectStudio main window local database access",
   "windows": ["main"],
   "permissions": [
-    "core:default",
-    "sql:default",
-    "sql:allow-execute"
+    "core:default"
   ]
 }

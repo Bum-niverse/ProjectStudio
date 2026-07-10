@@ -1,6 +1,7 @@
 import {
   ProjectValidationError,
   type CreateProjectInput,
+  type PrdRevision,
   type ProjectValidationErrors,
   type ProjectWithPrd,
 } from "../domain/project";
@@ -52,5 +53,18 @@ export class ProjectService {
 
   listProjects(): Promise<ProjectWithPrd[]> {
     return this.dependencies.repository.listProjects();
+  }
+
+  async savePrdRevision(currentRevision: PrdRevision, contentMarkdown: string): Promise<PrdRevision> {
+    const normalizedContent = contentMarkdown.trim();
+    if (!normalizedContent) throw new Error("PRD 내용은 비워둘 수 없습니다.");
+
+    return this.dependencies.repository.savePrdRevision({
+      documentId: currentRevision.documentId,
+      revisionId: this.createId(),
+      expectedRevisionNumber: currentRevision.revisionNumber,
+      contentMarkdown: normalizedContent,
+      createdAt: this.now(),
+    });
   }
 }

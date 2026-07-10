@@ -48,4 +48,17 @@ describe("ProjectService", () => {
       },
     } satisfies Partial<ProjectValidationError>);
   });
+
+  it("편집한 PRD를 새 사용자 리비전으로 저장한다", async () => {
+    const { service } = createService();
+    const created = await service.createProject({ name: "Globeat", idea: "도시 음악 탐색" });
+
+    const revision = await service.savePrdRevision(created.prd, "  # 수정한 PRD  ");
+
+    expect(revision).toMatchObject({
+      revisionNumber: 2,
+      contentMarkdown: "# 수정한 PRD",
+      source: "user",
+    });
+  });
 });
