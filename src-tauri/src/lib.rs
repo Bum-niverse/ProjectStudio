@@ -29,7 +29,8 @@ pub fn run() {
             project_repository::save_prd_revision,
             feature_repository::initialize_feature_spec,
             feature_repository::save_feature_position,
-            feature_repository::list_feature_positions
+            feature_repository::list_feature_positions,
+            feature_repository::update_feature
         ])
         .plugin(
             tauri_plugin_sql::Builder::default()

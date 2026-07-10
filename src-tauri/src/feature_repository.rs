@@ -14,6 +14,16 @@ pub struct FeatureSpec {
     priority: String,
     role: String,
     sort_order: i64,
+    acceptance_criteria: Vec<AcceptanceCriterion>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcceptanceCriterion {
+    id: String,
+    description: String,
+    is_met: bool,
+    sort_order: i64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -32,6 +42,14 @@ pub struct SaveFeaturePositionInput {
     view_mode: String,
     position_x: f64,
     position_y: f64,
+    updated_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateFeatureInput {
+    project_id: String,
+    feature: FeatureSpec,
     updated_at: String,
 }
 
@@ -66,23 +84,26 @@ pub async fn initialize_feature_spec(
     input: InitializeFeatureSpecInput,
 ) -> Result<Vec<FeatureSpec>, String> {
     let mut connection = open_database(&app).await?;
-    let existing = list_features(&mut connection, &input.project_id).await?;
-    if !existing.is_empty() {
-        return Ok(existing);
-    }
-
     let mut transaction = connection
         .begin()
         .await
         .map_err(|error| error.to_string())?;
     for feature in &input.features {
-        sqlx::query("INSERT INTO features (id, project_id, parent_feature_id, source_document_id, title, description, status, priority, role, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        sqlx::query("INSERT OR IGNORE INTO features (id, project_id, parent_feature_id, source_document_id, title, description, status, priority, role, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             .bind(&feature.id).bind(&input.project_id).bind(&feature.parent_id)
             .bind(&input.source_document_id).bind(&feature.title).bind(&feature.description)
             .bind(&feature.status).bind(&feature.priority).bind(&feature.role)
             .bind(feature.sort_order).bind(&input.created_at).bind(&input.created_at)
             .execute(&mut *transaction).await
             .map_err(|error| format!("기능명세를 저장하지 못했습니다: {error}"))?;
+    }
+    for feature in &input.features {
+        for criterion in &feature.acceptance_criteria {
+            sqlx::query("INSERT OR IGNORE INTO acceptance_criteria (id, feature_id, description, is_met, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                .bind(&criterion.id).bind(&feature.id).bind(&criterion.description).bind(criterion.is_met)
+                .bind(criterion.sort_order).bind(&input.created_at).bind(&input.created_at)
+                .execute(&mut *transaction).await.map_err(|error| format!("수용 기준을 저장하지 못했습니다: {error}"))?;
+        }
     }
     transaction
         .commit()
@@ -96,27 +117,85 @@ async fn list_features(
     project_id: &str,
 ) -> Result<Vec<FeatureSpec>, String> {
     let rows = sqlx::query("SELECT id, parent_feature_id, title, description, status, priority, role, sort_order FROM features WHERE project_id = ? ORDER BY sort_order")
-        .bind(project_id).fetch_all(connection).await.map_err(|error| error.to_string())?;
-    rows.into_iter()
-        .map(|row| {
-            Ok(FeatureSpec {
-                id: row.try_get("id").map_err(|error| error.to_string())?,
-                parent_id: row
-                    .try_get("parent_feature_id")
-                    .map_err(|error| error.to_string())?,
-                title: row.try_get("title").map_err(|error| error.to_string())?,
-                description: row
-                    .try_get("description")
-                    .map_err(|error| error.to_string())?,
-                status: row.try_get("status").map_err(|error| error.to_string())?,
-                priority: row.try_get("priority").map_err(|error| error.to_string())?,
-                role: row.try_get("role").map_err(|error| error.to_string())?,
-                sort_order: row
-                    .try_get("sort_order")
-                    .map_err(|error| error.to_string())?,
+        .bind(project_id).fetch_all(&mut *connection).await.map_err(|error| error.to_string())?;
+    let mut features = Vec::new();
+    for row in rows {
+        let feature_id: String = row.try_get("id").map_err(|error| error.to_string())?;
+        let criteria_rows = sqlx::query("SELECT id, description, is_met, sort_order FROM acceptance_criteria WHERE feature_id = ? ORDER BY sort_order")
+                .bind(&feature_id).fetch_all(&mut *connection).await.map_err(|error| error.to_string())?;
+        let acceptance_criteria = criteria_rows
+            .into_iter()
+            .map(|criterion| {
+                Ok(AcceptanceCriterion {
+                    id: criterion.try_get("id").map_err(|error| error.to_string())?,
+                    description: criterion
+                        .try_get("description")
+                        .map_err(|error| error.to_string())?,
+                    is_met: criterion
+                        .try_get::<i64, _>("is_met")
+                        .map_err(|error| error.to_string())?
+                        != 0,
+                    sort_order: criterion
+                        .try_get("sort_order")
+                        .map_err(|error| error.to_string())?,
+                })
             })
-        })
-        .collect()
+            .collect::<Result<Vec<_>, String>>()?;
+        features.push(FeatureSpec {
+            id: feature_id,
+            parent_id: row
+                .try_get("parent_feature_id")
+                .map_err(|error| error.to_string())?,
+            title: row.try_get("title").map_err(|error| error.to_string())?,
+            description: row
+                .try_get("description")
+                .map_err(|error| error.to_string())?,
+            status: row.try_get("status").map_err(|error| error.to_string())?,
+            priority: row.try_get("priority").map_err(|error| error.to_string())?,
+            role: row.try_get("role").map_err(|error| error.to_string())?,
+            sort_order: row
+                .try_get("sort_order")
+                .map_err(|error| error.to_string())?,
+            acceptance_criteria,
+        });
+    }
+    Ok(features)
+}
+
+#[tauri::command]
+pub async fn update_feature(
+    app: AppHandle,
+    input: UpdateFeatureInput,
+) -> Result<FeatureSpec, String> {
+    let mut connection = open_database(&app).await?;
+    let mut transaction = connection
+        .begin()
+        .await
+        .map_err(|error| error.to_string())?;
+    let result = sqlx::query("UPDATE features SET title = ?, description = ?, status = ?, priority = ?, role = ?, updated_at = ? WHERE id = ? AND project_id = ?")
+        .bind(&input.feature.title).bind(&input.feature.description).bind(&input.feature.status)
+        .bind(&input.feature.priority).bind(&input.feature.role).bind(&input.updated_at)
+        .bind(&input.feature.id).bind(&input.project_id).execute(&mut *transaction).await
+        .map_err(|error| format!("기능 문서를 저장하지 못했습니다: {error}"))?;
+    if result.rows_affected() != 1 {
+        return Err("저장할 기능 문서를 찾지 못했습니다.".to_owned());
+    }
+    sqlx::query("DELETE FROM acceptance_criteria WHERE feature_id = ?")
+        .bind(&input.feature.id)
+        .execute(&mut *transaction)
+        .await
+        .map_err(|error| error.to_string())?;
+    for criterion in &input.feature.acceptance_criteria {
+        sqlx::query("INSERT INTO acceptance_criteria (id, feature_id, description, is_met, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            .bind(&criterion.id).bind(&input.feature.id).bind(&criterion.description).bind(criterion.is_met)
+            .bind(criterion.sort_order).bind(&input.updated_at).bind(&input.updated_at)
+            .execute(&mut *transaction).await.map_err(|error| format!("수용 기준을 저장하지 못했습니다: {error}"))?;
+    }
+    transaction
+        .commit()
+        .await
+        .map_err(|error| error.to_string())?;
+    Ok(input.feature)
 }
 
 #[tauri::command]

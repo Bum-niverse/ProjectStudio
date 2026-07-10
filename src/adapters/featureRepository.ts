@@ -10,6 +10,9 @@ class TauriFeatureRepository implements FeatureRepository {
   savePosition(position: FeaturePosition) {
     return invoke<void>("save_feature_position", { input: { ...position, updatedAt: new Date().toISOString() } });
   }
+  updateFeature(projectId: string, feature: FeatureSpec) {
+    return invoke<FeatureSpec>("update_feature", { input: { projectId, feature, updatedAt: new Date().toISOString() } });
+  }
 }
 
 class BrowserFeatureRepository implements FeatureRepository {
@@ -20,6 +23,7 @@ class BrowserFeatureRepository implements FeatureRepository {
     const current = JSON.parse(localStorage.getItem(key) ?? "[]") as FeaturePosition[];
     localStorage.setItem(key, JSON.stringify([...current.filter((item) => item.featureId !== position.featureId || item.viewMode !== position.viewMode), position]));
   }
+  async updateFeature(_projectId: string, feature: FeatureSpec) { return feature; }
 }
 
 export function createFeatureRepository(): FeatureRepository {

@@ -21,6 +21,7 @@ MVP 아키텍처와 초기 데이터 모델을 확정하고 첫 수직 기능 �
 - [MVP 아키텍처와 구현 계획](docs/mvp-architecture.md)
 - [개발 진행](docs/progress.md)
 - [제품 초안](docs/product-brief.md)
+- [Codex 동기화 계약](docs/codex-sync-contract.md)
 
 ## 개발 명령
 

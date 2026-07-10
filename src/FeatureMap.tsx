@@ -11,9 +11,17 @@ import {
 import "@xyflow/react/dist/style.css";
 import { createDevelopmentFeatureSpec, type FeatureSpec } from "./domain/feature";
 import { createFeatureRepository } from "./adapters/featureRepository";
+import { FeatureDocumentView } from "./FeatureDocumentView";
 
 type ViewMode = "tree" | "mindmap";
+type WorkspaceViewMode = "document" | ViewMode;
 type FeatureNode = Node<{ feature: FeatureSpec; label: string }>;
+const MAGNET_DISTANCE = 34;
+
+function magnetize(value: number, candidates: number[]): number {
+  const closest = candidates.reduce((best, candidate) => Math.abs(candidate - value) < Math.abs(best - value) ? candidate : best, value);
+  return Math.abs(closest - value) <= MAGNET_DISTANCE ? closest : value;
+}
 
 interface FeatureMapProps {
   projectId: string;
@@ -50,12 +58,23 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode): FeatureNode[] 
     resolveAngle(root);
   }
 
+  if (mode === "tree") {
+    let nextLeafRow = 0;
+    const placeTreeNode = (feature: FeatureSpec, depth: number): number => {
+      const children = childrenByParent.get(feature.id) ?? [];
+      const y = children.length === 0
+        ? 35 + nextLeafRow++ * 74
+        : children.map((child) => placeTreeNode(child, depth + 1)).reduce((sum, value) => sum + value, 0) / children.length;
+      positions.set(feature.id, { x: 30 + depth * 270, y });
+      return y;
+    };
+    placeTreeNode(root, 0);
+  }
+
   const placeChildren = (parent: FeatureSpec, depth: number) => {
     const children = childrenByParent.get(parent.id) ?? [];
-    children.forEach((child, index) => {
-      if (mode === "tree") {
-        positions.set(child.id, { x: 40 + depth * 270, y: 60 + index * 170 + (depth - 1) * 34 });
-      } else {
+    children.forEach((child) => {
+      if (mode === "mindmap") {
         const angle = mindMapAngles.get(child.id) ?? 0;
         const radius = depth * 230;
         positions.set(child.id, {
@@ -82,8 +101,9 @@ export function FeatureMap({ projectId, sourceDocumentId }: FeatureMapProps) {
   const repository = useMemo(() => createFeatureRepository(), []);
   const generatedFeatures = useMemo(() => createDevelopmentFeatureSpec(projectId), [projectId]);
   const [features, setFeatures] = useState(generatedFeatures);
-  const [mode, setMode] = useState<ViewMode>("tree");
-  const defaultNodes = useMemo(() => layoutFeatures(features, mode), [features, mode]);
+  const [mode, setMode] = useState<WorkspaceViewMode>("document");
+  const mapMode: ViewMode = mode === "mindmap" ? "mindmap" : "tree";
+  const defaultNodes = useMemo(() => layoutFeatures(features, mapMode), [features, mapMode]);
   const [positionsByMode, setPositionsByMode] = useState<Record<ViewMode, Record<string, { x: number; y: number }>>>({ tree: {}, mindmap: {} });
   const [persistenceMessage, setPersistenceMessage] = useState("기능명세를 불러오는 중…");
 
@@ -100,43 +120,54 @@ export function FeatureMap({ projectId, sourceDocumentId }: FeatureMapProps) {
       setPersistenceMessage("SQLite와 동기화됨");
     }).catch(() => setPersistenceMessage("기능명세 저장소를 연결하지 못했습니다."));
   }, [generatedFeatures, projectId, repository, sourceDocumentId]);
-  const nodes = defaultNodes.map((node) => ({ ...node, position: positionsByMode[mode][node.id] ?? node.position }));
+  const nodes = defaultNodes.map((node) => ({ ...node, position: positionsByMode[mapMode][node.id] ?? node.position }));
   const edges: Edge[] = features
     .filter((feature) => feature.parentId)
     .map((feature) => ({
       id: `${feature.parentId}-${feature.id}`,
       source: feature.parentId!,
       target: feature.id,
-      type: "smoothstep",
+      type: "default",
       markerEnd: { type: MarkerType.ArrowClosed },
     }));
 
   const handleNodeDragStop = useCallback((_: MouseEvent | TouchEvent, node: FeatureNode) => {
+    const otherNodes = nodes.filter((item) => item.id !== node.id);
+    const position = {
+      x: magnetize(node.position.x, otherNodes.map((item) => item.position.x)),
+      y: magnetize(node.position.y, otherNodes.map((item) => item.position.y)),
+    };
     setPositionsByMode((current) => {
-      const updated = { ...current[mode], [node.id]: node.position };
-      void repository.savePosition({ projectId, featureId: node.id, viewMode: mode, positionX: node.position.x, positionY: node.position.y })
+      const updated = { ...current[mapMode], [node.id]: position };
+      void repository.savePosition({ projectId, featureId: node.id, viewMode: mapMode, positionX: position.x, positionY: position.y })
         .then(() => setPersistenceMessage("노드 위치 저장됨"))
         .catch(() => setPersistenceMessage("노드 위치를 저장하지 못했습니다."));
-      return { ...current, [mode]: updated };
+      return { ...current, [mapMode]: updated };
     });
-  }, [mode, projectId, repository]);
+  }, [mapMode, nodes, projectId, repository]);
+
+  async function handleSaveFeature(feature: FeatureSpec) {
+    const saved = await repository.updateFeature(projectId, feature);
+    setFeatures((current) => current.map((item) => item.id === saved.id ? saved : item));
+  }
 
   return (
     <section className="feature-map-section">
       <div className="feature-map-header">
         <div><p className="eyebrow">03 · FEATURE SPECIFICATION</p><h5>계층형 기능명세</h5><small>{persistenceMessage}</small></div>
         <div className="view-switch" aria-label="기능명세 보기 방식">
+          <button className={mode === "document" ? "selected" : ""} onClick={() => setMode("document")} type="button">문서</button>
           <button className={mode === "tree" ? "selected" : ""} onClick={() => setMode("tree")} type="button">트리</button>
           <button className={mode === "mindmap" ? "selected" : ""} onClick={() => setMode("mindmap")} type="button">마인드맵</button>
         </div>
       </div>
-      <div className="feature-canvas" data-view-mode={mode}>
-        <ReactFlow nodes={nodes} edges={edges} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.25, duration: 350 }} minZoom={0.25} maxZoom={1.8} panOnScroll>
+      {mode === "document" ? <FeatureDocumentView features={features} onSave={handleSaveFeature} /> : <div className="feature-canvas" data-view-mode={mode}>
+        <ReactFlow nodes={nodes} edges={edges} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.18, duration: 350, maxZoom: 0.9 }} minZoom={0.25} maxZoom={1.8} panOnScroll>
           <Background color="#343741" gap={24} size={1} />
           <MiniMap pannable zoomable />
           <Controls showInteractive={false} />
         </ReactFlow>
-      </div>
+      </div>}
     </section>
   );
 }

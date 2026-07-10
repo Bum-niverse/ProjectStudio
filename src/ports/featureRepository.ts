@@ -6,4 +6,5 @@ export interface FeatureRepository {
   initialize(projectId: string, sourceDocumentId: string, features: FeatureSpec[]): Promise<FeatureSpec[]>;
   listPositions(projectId: string): Promise<FeaturePosition[]>;
   savePosition(position: FeaturePosition): Promise<void>;
+  updateFeature(projectId: string, feature: FeatureSpec): Promise<FeatureSpec>;
 }
