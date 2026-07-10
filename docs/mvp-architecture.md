@@ -50,6 +50,7 @@ docs/
 | `document_revisions` | 복구 가능한 불변 문서 내용 | 문서별 순차 버전 |
 | `change_proposals` | AI 또는 사용자가 제안한 변경의 승인 대기 기록 | 기준/제안 리비전과 승인 결과 연결 |
 | `feature_change_proposals` | 기능명세 AI 변경안의 원본·제안 스냅샷과 결정 | 승인 전 원본 격리, 기준 시점 충돌 차단 |
+| `user_flow_nodes` / `user_flow_edges` | 요구사항별 사용자 흐름 단계와 연결 | 노드 문서·종류·배치와 방향 연결 보존 |
 | `features` | 계층형 기능명세와 개발 상태 | 부모 기능, 근거 문서 연결 |
 | `acceptance_criteria` | 기능별 검증 가능한 완료 조건 | 기능에 종속 |
 | `development_tasks` | 구현 작업과 진행 상태 | 기능에 종속 |

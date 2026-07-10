@@ -3,6 +3,7 @@ mod developer_tools;
 mod feature_change_proposals;
 mod feature_repository;
 mod project_repository;
+mod user_flow_repository;
 
 use tauri_plugin_sql::{Migration, MigrationKind};
 
@@ -29,6 +30,12 @@ pub fn run() {
             sql: include_str!("../migrations/0003_feature_change_proposals.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "user_flows",
+            sql: include_str!("../migrations/0004_user_flows.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -45,7 +52,10 @@ pub fn run() {
             feature_change_proposals::list_feature_change_proposals,
             feature_change_proposals::decide_feature_change_proposal,
             developer_tools::check_developer_tools,
-            codex_sync::sync_project_documents
+            codex_sync::sync_project_documents,
+            user_flow_repository::initialize_user_flow,
+            user_flow_repository::update_user_flow_node,
+            user_flow_repository::connect_user_flow_nodes
         ])
         .plugin(
             tauri_plugin_sql::Builder::default()

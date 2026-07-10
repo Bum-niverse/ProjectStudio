@@ -6,8 +6,9 @@ import { PrdEditor } from "./PrdEditor";
 import "./styles.css";
 import { SettingsPage } from "./SettingsPage";
 import { applyTheme, loadTheme, type ThemeId } from "./theme";
+import { UserFlowPage } from "./UserFlowPage";
 
-type AppPage = "project" | "prd" | "features" | "settings";
+type AppPage = "project" | "prd" | "features" | "user-flow" | "settings";
 
 const STAGES = [
   { id: "project", label: "프로젝트" },
@@ -34,7 +35,7 @@ export default function App() {
   const [loadError, setLoadError] = useState<string>();
 
   const selectedProject = projects.find(({ project }) => project.id === selectedProjectId);
-  const activeStageIndex = page === "project" ? 0 : page === "prd" ? 1 : page === "features" ? 2 : -1;
+  const activeStageIndex = page === "project" ? 0 : page === "prd" ? 1 : page === "features" ? 2 : page === "user-flow" ? 3 : -1;
 
   useEffect(() => { applyTheme(theme); }, [theme]);
 
@@ -96,9 +97,9 @@ export default function App() {
         {STAGES.map((stage, index) => (
           <button
             className={index === activeStageIndex ? "active" : index < activeStageIndex ? "complete" : ""}
-            disabled={index > 2 || (index > 0 && !selectedProject)}
+            disabled={index > 3 || (index > 0 && !selectedProject)}
             key={stage.id}
-            onClick={() => index <= 2 && handleNavigate(stage.id as AppPage)}
+            onClick={() => index <= 3 && handleNavigate(stage.id as AppPage)}
             type="button"
           >
             <span>{index + 1}</span>{stage.label}
@@ -150,9 +151,10 @@ export default function App() {
       {page === "features" && selectedProject && (
         <section className="full-page feature-page">
           <FeatureMap projectId={selectedProject.project.id} sourceDocumentId={selectedProject.prd.documentId} />
-          <div className="page-actions"><button className="secondary" onClick={() => setPage("prd")} type="button">이전: PRD</button><button disabled type="button">다음: 유저플로우</button></div>
+          <div className="page-actions"><button className="secondary" onClick={() => setPage("prd")} type="button">이전: PRD</button><button onClick={() => setPage("user-flow")} type="button">다음: 유저플로우</button></div>
         </section>
       )}
+      {page === "user-flow" && selectedProject && <section className="full-page user-flow-full-page"><UserFlowPage projectId={selectedProject.project.id} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("features")} type="button">이전: 기능명세</button><button disabled type="button">다음: 와이어프레임</button></div></section>}
     </main>
   );
 }
