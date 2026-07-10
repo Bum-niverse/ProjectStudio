@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createProjectService } from "./application/createProjectService";
 import { ProjectValidationError, type ProjectValidationErrors, type ProjectWithPrd } from "./domain/project";
 import { PrdEditor } from "./PrdEditor";
+import { FeatureMap } from "./FeatureMap";
 import "./styles.css";
 
 export default function App() {
@@ -123,6 +124,7 @@ export default function App() {
                     revision={prd}
                     onSave={(contentMarkdown) => handleSavePrd(project.id, contentMarkdown)}
                   />
+                  <FeatureMap projectId={project.id} />
                 </article>
               ))}
             </div>
