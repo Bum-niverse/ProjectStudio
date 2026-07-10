@@ -13,6 +13,7 @@ import { UserFlowPage } from "./UserFlowPage";
 import { WireframePage } from "./WireframePage";
 import { ExportPage } from "./ExportPage";
 import { LoginPage } from "./LoginPage";
+import { createDevelopmentPrdValues } from "./adapters/developmentPrdGenerator";
 
 interface GithubUser{id:number;login:string;name?:string;avatarUrl:string;isOwner:boolean}
 
@@ -164,7 +165,7 @@ export default function App() {
             <div><p className="eyebrow">02 · PRODUCT REQUIREMENTS</p><h2>{selectedProject.project.name} PRD</h2><p>{selectedProject.project.idea}</p></div>
             <span className="revision-badge">REV {selectedProject.prd.revisionNumber}</span>
           </div>
-          <PrdEditor revision={selectedProject.prd} onSave={handleSavePrd} />
+          <PrdEditor key={selectedProject.prd.id} revision={selectedProject.prd} fallbackValues={createDevelopmentPrdValues(selectedProject.project.name,selectedProject.project.idea)} onSave={handleSavePrd} />
           <div className="page-actions"><button className="secondary" onClick={() => setPage("project")} type="button">이전: 프로젝트</button><button onClick={() => setPage("features")} type="button">다음: 기능명세</button></div>
         </section>
       )}

@@ -107,6 +107,11 @@ pub async fn initialize_feature_spec(
             .bind(feature.sort_order).bind(&input.created_at).bind(&input.created_at).bind(feature.color_key.as_deref().unwrap_or("cyan"))
             .execute(&mut *transaction).await
             .map_err(|error| format!("기능명세를 저장하지 못했습니다: {error}"))?;
+        // Upgrade only the former development-mode boilerplate. User-edited descriptions never match these clauses.
+        sqlx::query("UPDATE features SET description = ?, updated_at = ? WHERE id = ? AND (description LIKE '%정상 처리 흐름과 완료 결과를 정의한다.%' OR description LIKE '%입력 조건과 실패 시 재시도 동작을 정의한다.%' OR description LIKE '%저장 결과와 변경 이력을 추적한다.%')")
+            .bind(&feature.description).bind(&input.created_at).bind(&feature.id)
+            .execute(&mut *transaction).await
+            .map_err(|error| format!("기존 기능명세 설명을 보완하지 못했습니다: {error}"))?;
     }
     for feature in &input.features {
         for criterion in &feature.acceptance_criteria {
@@ -114,6 +119,9 @@ pub async fn initialize_feature_spec(
                 .bind(&criterion.id).bind(&feature.id).bind(&criterion.description).bind(criterion.is_met)
                 .bind(criterion.sort_order).bind(&input.created_at).bind(&input.created_at)
                 .execute(&mut *transaction).await.map_err(|error| format!("수용 기준을 저장하지 못했습니다: {error}"))?;
+            sqlx::query("UPDATE acceptance_criteria SET description = ?, updated_at = ? WHERE id = ? AND description = '사용자가 해당 단계를 완료하고 결과를 다시 확인할 수 있다.'")
+                .bind(&criterion.description).bind(&input.created_at).bind(&criterion.id)
+                .execute(&mut *transaction).await.map_err(|error| format!("기존 수용 기준을 보완하지 못했습니다: {error}"))?;
         }
     }
     transaction

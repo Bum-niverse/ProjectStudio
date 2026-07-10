@@ -56,10 +56,10 @@ function createGlobeatFeatureSpec(projectId: string): FeatureSpec[] {
     {id:`${projectId}-review`,parentId:`${projectId}-moderation`,title:"운영자 신고 검토",status:"planned",priority:"medium",role:"운영자",description:"신고를 검토해 유지·숨김 등 최소 조치를 기록한다.",sortOrder:52,acceptanceCriteria:criteria(`${projectId}-review`,["처리 상태와 사유를 기록한다."])},
   ];
   const parents=definitions.filter(feature=>feature.parentId&&feature.parentId!==root);const details=parents.flatMap((parent,parentIndex)=>[
-    {suffix:"flow",title:`${parent.title} 기본 흐름`,description:`${parent.title}의 정상 처리 흐름과 완료 결과를 정의한다.`},
-    {suffix:"validation",title:`${parent.title} 입력·검증·오류 복구`,description:`${parent.title}의 입력 조건과 실패 시 재시도 동작을 정의한다.`},
-    {suffix:"history",title:`${parent.title} 저장·변경 이력`,description:`${parent.title}의 저장 결과와 변경 이력을 추적한다.`},
-  ].map((item,index):FeatureSpec=>{const id=`${parent.id}-${item.suffix}`;return{id,parentId:parent.id,title:item.title,description:item.description,status:"planned",priority:parent.priority,role:parent.role,sortOrder:100+parentIndex*3+index,acceptanceCriteria:criteria(id,["사용자가 해당 단계를 완료하고 결과를 다시 확인할 수 있다."])};}));
+    {suffix:"flow",title:`${parent.title} 기본 흐름`,description:`${parent.role}가 ${parent.description} 시작 조건, 화면 전환과 완료 상태를 단계별로 정의한다.`,criteria:[`${parent.title} 진입 전 필요한 상태와 권한을 확인한다.`,`${parent.role}가 중간 입력을 잃지 않고 핵심 행동을 끝까지 수행한다.`,`완료 후 ${parent.title} 결과와 다음 행동을 명확하게 표시한다.`]},
+    {suffix:"validation",title:`${parent.title} 입력·검증·오류 복구`,description:`${parent.title}에서 발생할 수 있는 잘못된 입력, 권한 부족, 외부 링크·네트워크 실패와 복구 동작을 정의한다.`,criteria:[`필수 입력 누락과 잘못된 형식을 해당 필드 가까이에서 설명한다.`,`권한 또는 외부 서비스 실패 시 원인과 재시도·되돌아가기 행동을 제공한다.`,`검증 실패 후에도 ${parent.title}에서 사용자가 작성한 유효한 값을 유지한다.`]},
+    {suffix:"history",title:`${parent.title} 저장·재조회·변경 이력`,description:`${parent.title}의 저장 단위, 재조회 결과, 소유권과 변경 시각을 추적해 데이터 일관성을 보장한다.`,criteria:[`저장된 ${parent.title} 결과를 같은 사용자와 공개 범위 규칙에 따라 다시 조회한다.`,`수정 시 생성자·수정 시각·변경 대상 ID를 남기고 중복 저장을 방지한다.`,`삭제·비공개·외부 링크 만료 상태가 목록, 상세과 지도 표시에 일관되게 반영된다.`]},
+  ].map((item,index):FeatureSpec=>{const id=`${parent.id}-${item.suffix}`;return{id,parentId:parent.id,title:item.title,description:item.description,status:"planned",priority:parent.priority,role:parent.role,sortOrder:100+parentIndex*3+index,acceptanceCriteria:criteria(id,item.criteria)};}));
   return [...definitions,...details];
 }
 
