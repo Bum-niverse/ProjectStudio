@@ -2,6 +2,7 @@ mod codex_sync;
 mod developer_tools;
 mod feature_change_proposals;
 mod feature_repository;
+mod github_auth;
 mod project_export;
 mod project_repository;
 mod user_flow_repository;
@@ -63,6 +64,8 @@ pub fn run() {
             feature_change_proposals::decide_feature_change_proposal,
             developer_tools::check_developer_tools,
             developer_tools::check_tool_connection,
+            github_auth::get_github_session,
+            github_auth::start_github_login,
             codex_sync::sync_project_documents,
             user_flow_repository::initialize_user_flow,
             user_flow_repository::update_user_flow_node,

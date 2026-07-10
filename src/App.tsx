@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { createProjectService } from "./application/createProjectService";
 import { ProjectValidationError, type ProjectValidationErrors, type ProjectWithPrd } from "./domain/project";
 import { FeatureMap } from "./FeatureMap";
@@ -9,6 +10,9 @@ import { applyTheme, loadTheme, type ThemeId } from "./theme";
 import { UserFlowPage } from "./UserFlowPage";
 import { WireframePage } from "./WireframePage";
 import { ExportPage } from "./ExportPage";
+import { LoginPage } from "./LoginPage";
+
+interface GithubUser{id:number;login:string;name?:string;avatarUrl:string;isOwner:boolean}
 
 type AppPage = "project" | "prd" | "features" | "user-flow" | "wireframe" | "export" | "settings";
 
@@ -35,6 +39,10 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string>();
   const [loadError, setLoadError] = useState<string>();
+  const [githubUser,setGithubUser]=useState<GithubUser>();
+  const [isAuthenticating,setIsAuthenticating]=useState(false);
+  const [authMessage,setAuthMessage]=useState<string>();
+  const [isDeveloperMode,setIsDeveloperMode]=useState(()=>localStorage.getItem("projectstudio:developer-mode")==="true");
 
   const selectedProject = projects.find(({ project }) => project.id === selectedProjectId);
   const activeStageIndex = page === "project" ? 0 : page === "prd" ? 1 : page === "features" ? 2 : page === "user-flow" ? 3 : page === "wireframe" ? 4 : page === "export" ? 5 : -1;
@@ -42,10 +50,16 @@ export default function App() {
   useEffect(() => { applyTheme(theme); }, [theme]);
 
   useEffect(() => {
+    if(!githubUser)return;
     void service.listProjects().then(setProjects)
       .catch(() => setLoadError("저장된 프로젝트를 불러오지 못했습니다."))
       .finally(() => setIsLoading(false));
-  }, [service]);
+  }, [githubUser,service]);
+
+  async function handleGithubLogin(){setIsAuthenticating(true);setAuthMessage(undefined);try{if(!isTauri())throw new Error("GitHub 로그인은 데스크톱 앱에서 사용할 수 있습니다.");const user=await invoke<GithubUser>("get_github_session");setIsLoading(true);setGithubUser(user);setAuthMessage(undefined);}catch(error){setAuthMessage(error instanceof Error?error.message:String(error));}finally{setIsAuthenticating(false);}}
+  async function handleStartGithubLogin(){try{if(!isTauri())throw new Error("GitHub 로그인은 데스크톱 앱에서 사용할 수 있습니다.");await invoke("start_github_login");setAuthMessage("열린 GitHub CLI 창에서 로그인을 완료한 뒤 ‘GitHub로 로그인’을 다시 눌러 주세요.");}catch(error){setAuthMessage(error instanceof Error?error.message:String(error));}}
+  function handleDeveloperMode(){const next=!isDeveloperMode;setIsDeveloperMode(next);localStorage.setItem("projectstudio:developer-mode",String(next));}
+  function handleLock(){setGithubUser(undefined);setProjects([]);setSelectedProjectId(undefined);setPage("project");setIsLoading(false);}
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -87,12 +101,13 @@ export default function App() {
 
   function handleOpenSettings() { setReturnPage(page === "settings" ? "project" : page); setPage("settings"); }
 
+  if(!githubUser)return <LoginPage message={authMessage} isAuthenticating={isAuthenticating} onLogin={()=>void handleGithubLogin()} onStartLogin={()=>void handleStartGithubLogin()}/>;
   return (
     <main className="app-shell page-shell">
       <header className="topbar">
         <div className="brand-mark">PS</div>
         <div><p className="eyebrow">LOCAL PRODUCT WORKSPACE</p><h1>ProjectStudio</h1></div>
-        <div className="topbar-actions"><span className="mode-badge">개발 모드 · 외부 전송 없음</span><button onClick={handleOpenSettings} type="button" aria-label="설정 열기">⚙ 설정</button></div>
+        <div className="topbar-actions"><span className="github-user-badge">@{githubUser.login}</span>{githubUser.isOwner&&<button className={isDeveloperMode?"developer-mode-toggle active":"developer-mode-toggle"} onClick={handleDeveloperMode} type="button">개발자 모드 {isDeveloperMode?"ON":"OFF"}</button>}<span className="mode-badge">{isDeveloperMode?(window.location.port==="1420"?"실시간 반영 연결됨":"개발 빌드에서 실시간 반영"):"외부 전송 없음"}</span><button onClick={handleOpenSettings} type="button" aria-label="설정 열기">⚙ 설정</button><button onClick={handleLock} type="button">잠금</button></div>
       </header>
 
       {page !== "settings" && <nav className="page-progress" aria-label="제품 개발 단계">
