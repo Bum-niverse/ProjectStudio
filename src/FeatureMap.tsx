@@ -213,7 +213,7 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
       </div>
       {mode === "document" ? <FeatureDocumentView features={features} onSave={handleSaveFeature} /> : <div className="feature-canvas" data-view-mode={mode}>
         <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.18, duration: 350, maxZoom: 0.9 }} minZoom={0.25} maxZoom={1.8} panOnScroll proOptions={{hideAttribution:true}}>
-          <Background color="#343741" gap={24} size={1} />
+          <Background color="var(--theme-border)" gap={24} size={1} />
           <MiniMap pannable zoomable />
           <Controls showInteractive={false} />
           <Panel position="bottom-right"><div className="canvas-layout-controls"><button onClick={()=>handleResetLayout("default")} type="button">기본 정렬</button><button onClick={()=>handleResetLayout("compact")} type="button">좁은 정렬</button></div></Panel>

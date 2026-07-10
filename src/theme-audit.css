@@ -1,0 +1,30 @@
+/* Final theme and layout audit: application chrome always follows shared tokens. */
+*,*::before,*::after{box-sizing:border-box}
+html,body,#root,.app-shell,.page-shell{width:100%;max-width:100%;overflow-x:hidden}
+p,li,dd,label,button,input,textarea,select{color:inherit}
+.app-shell,.topbar,.topbar>div:nth-child(2),.topbar-actions,.page-progress,.full-page,.project-page-grid,.document-view,.feature-map-header,.user-flow-header,.wireframe-setup,.wireframe-workspace,.export-page,.settings-page{min-width:0}
+.topbar-actions{flex-wrap:wrap;justify-content:flex-end}.topbar-actions>*{white-space:nowrap}
+.page-progress button{min-width:0;line-height:1.25;white-space:nowrap}.page-progress button span{flex:0 0 20px}
+.project-create-form,.recent-projects,.settings-section,.export-grid>section,.wireframe-setup-grid>div>section,.wireframe-page-picker{color:var(--theme-text);border-color:var(--theme-border);background:var(--theme-surface-2)}
+.project-create-form>p,.recent-projects>p,.settings-hint,.document-save-message,.export-page footer,.wireframe-setup footer{color:var(--theme-text)}
+.project-create-form label,.connection-form label,.export-path-label{color:var(--theme-muted)!important}
+.recent-projects>button strong,.theme-card strong,.llm-connection-toggle strong,.wireframe-group-toggle strong,.export-option-grid strong,.export-check-list label{color:var(--theme-text)}
+.theme-card small,.connection-status span,.llm-connection-toggle small,.wireframe-group-toggle small,.export-option-grid small{color:var(--theme-muted)}
+.theme-card,.llm-connection-toggle,.wireframe-group-toggle,.wireframe-page-group label,.export-option-grid label,.export-check-list label{border-color:var(--theme-border);background:var(--theme-surface)}
+.theme-card{align-content:start;min-width:0}.theme-card strong,.theme-card small{overflow-wrap:anywhere}.theme-card small{min-height:0;line-height:1.45}
+.settings-heading>div,.settings-section-heading>div,.page-heading-row>div,.feature-map-header>div,.user-flow-header>div,.wireframe-workspace>header>div,.export-page>footer>div{min-width:0}
+.connection-form{grid-template-columns:minmax(220px,1fr) minmax(220px,1fr) auto}.settings-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}.settings-actions button{white-space:nowrap}
+.llm-connection-toggle{gap:8px}.llm-connection-toggle strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.llm-connection-toggle small{max-width:34ch;text-align:right;overflow-wrap:anywhere}
+.document-column{min-width:0}.document-column>button{min-width:0}.document-column>button strong,.document-column>button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.document-meta,.criteria-section,.criterion-row,.proposal-panel,.node-document-panel{min-width:0}.criterion-row{align-items:start}.criterion-row textarea{min-width:0}
+.view-switch,.segmented-control,.canvas-layout-controls{flex-wrap:wrap}.view-switch button,.segmented-control button,.canvas-layout-controls button,.page-actions button{white-space:nowrap}
+.feature-map-header,.user-flow-header,.wireframe-workspace>header,.page-heading-row,.export-page>footer{flex-wrap:wrap}
+.provider-grid button{min-width:0;align-content:start}.provider-grid button strong,.provider-grid button small{overflow-wrap:anywhere}.provider-grid button small{min-height:0;line-height:1.45}
+.wireframe-picker-heading{gap:12px;flex-wrap:wrap}.wireframe-group-toggle{align-items:center;gap:8px}.wireframe-group-toggle strong{min-width:0;overflow-wrap:anywhere}.wireframe-group-toggle small{white-space:nowrap}
+.wireframe-page-group label{align-items:start;min-width:0}.wireframe-page-group label input{width:16px!important;height:16px;margin:2px 0 0}.wireframe-page-group label span{overflow-wrap:anywhere}
+.export-check-list label{min-width:0;line-height:1.4;overflow-wrap:anywhere}.export-option-grid label{align-items:start;min-width:0}.export-option-grid input{width:16px!important;height:16px}
+.export-page>footer button,.wireframe-setup>footer button{flex:0 0 auto;white-space:nowrap}
+.login-card,.login-security{color:var(--theme-text)}.login-copy>p:last-child,.login-security span,.login-card>small{color:var(--theme-muted)}
+:root[data-theme="light"] .secondary:hover:not(:disabled),:root[data-theme="light"] .topbar-actions button:hover:not(:disabled),:root[data-theme="light"] .view-switch button:hover:not(:disabled),:root[data-theme="light"] .node-action-toolbar button:hover:not(:disabled){color:var(--theme-text)!important;background:var(--theme-surface-2)!important}
+@media(max-width:1180px){.topbar-actions .mode-badge{display:none}.theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.connection-form{grid-template-columns:1fr 1fr}.connection-form .settings-actions{grid-column:1/-1}.wireframe-setup-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:760px){.topbar{align-items:flex-start}.topbar-actions{gap:6px}.github-user-badge{display:none}.page-progress{grid-template-columns:repeat(3,minmax(0,1fr))}.page-progress button{white-space:normal}.project-page-grid,.export-grid,.export-check-list,.wireframe-page-group>div,.connection-form,.theme-grid,.provider-grid{grid-template-columns:1fr}.connection-form .settings-actions{grid-column:auto}.full-page,.export-page,.wireframe-setup{padding:22px}.page-actions,.wireframe-setup>footer,.export-page>footer{align-items:stretch;flex-direction:column}.page-actions button,.wireframe-setup>footer button,.export-page>footer button{width:100%;min-width:0}}

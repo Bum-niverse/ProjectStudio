@@ -6,6 +6,7 @@ import { ProjectValidationError, type ProjectValidationErrors, type ProjectWithP
 import { FeatureMap } from "./FeatureMap";
 import { PrdEditor } from "./PrdEditor";
 import "./styles.css";
+import "./theme-audit.css";
 import { SettingsPage } from "./SettingsPage";
 import { applyTheme, loadTheme, type ThemeId } from "./theme";
 import { UserFlowPage } from "./UserFlowPage";
@@ -27,6 +28,7 @@ const STAGES = [
 ] as const;
 
 export default function App() {
+  const isVisualTest = !isTauri() && new URLSearchParams(window.location.search).get("visual-test") === "1";
   const service = useMemo(() => createProjectService(), []);
   const [page, setPage] = useState<AppPage>("project");
   const [returnPage, setReturnPage] = useState<AppPage>("project");
@@ -40,7 +42,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string>();
   const [loadError, setLoadError] = useState<string>();
-  const [githubUser,setGithubUser]=useState<GithubUser>();
+  const [githubUser,setGithubUser]=useState<GithubUser | undefined>(() => isVisualTest ? { id: 128395576, login: "Bum-niverse", name: "Visual QA", avatarUrl: "", isOwner: true } : undefined);
   const [isAuthenticating,setIsAuthenticating]=useState(false);
   const [authMessage,setAuthMessage]=useState<string>();
   const [isDeveloperMode,setIsDeveloperMode]=useState(()=>localStorage.getItem("projectstudio:developer-mode")==="true");

@@ -54,6 +54,8 @@ Codex 연동 산출물은 연결된 저장소의 `.projectstudio` 아래에 안�
 
 설정 페이지는 Pure Black, VS Code Light, Neutral Gray, VS Code Dark의 네 가지 테마를 제공하고 선택을 이 컴퓨터에 유지한다. VS Code Light/Dark는 Microsoft의 Light Modern/Dark Modern workbench 색상 토큰을 기준으로 배경·패널·입력·테두리·본문·보조 글씨·강조색을 함께 전환해 화면 안팎의 대비를 일관되게 유지한다. Codex·Git·GitHub CLI의 설치 및 GitHub CLI 인증 상태를 로컬에서 확인하며 토큰이나 계정 응답은 저장하지 않는다. 프로젝트별 로컬 Git 저장소와 GitHub 원격 주소를 지정하고 사용자가 명시적으로 동기화할 때만 `.projectstudio` 문서를 쓴다.
 
+모든 페이지의 카드·입력·보조 문구·선택 상태는 동일한 테마 토큰을 사용하며 밝은 테마에서도 흰 글씨가 밝은 배경에 남지 않아야 한다. 데스크톱 폭이 줄어들면 상단 상태, 단계 탭, 설정 연결 폼, 와이어프레임 선택 목록과 내보내기 체크 목록은 경계를 넘기지 않고 의도된 단위로 재배치한다. 긴 문서명은 목록에서는 한 줄 말줄임으로, 설명과 선택 항목에서는 자연스러운 여러 줄로 표시한다.
+
 설정의 도구 상태 영역은 Claude CLI, Codex CLI, Antigravity, Git, GitHub CLI와 GitHub 인증을 개별 카드로 표시한다. 사용자는 작은 재시도 버튼으로 로컬 설치·인증 상태를 다시 확인하며, ProjectStudio는 이 확인 과정에서 자격 증명이나 API 키를 수집하지 않는다. 프로젝트 저장소와 GitHub 원격 설정은 별도 영역으로 유지한다.
 
 LLM 도구는 `CLAUDE CLI`, `CODEX CLI`, `ANTIGRAVITY`, `로컬 LLM · OLLAMA` 접이식 연결 카드로 관리한다. 각 카드는 사용자가 CLI 실행 파일 이름 또는 절대 경로를 직접 지정하고 저장한 뒤 개별 연결 확인을 실행한다. 연결 확인은 `--version` 정보만 읽고 프로젝트 문서를 전송하지 않는다.
