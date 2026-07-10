@@ -12,6 +12,11 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 
 const DATABASE_URL: &str = "sqlite:projectstudio.db";
 
+#[tauri::command]
+fn exit_projectstudio(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let migrations = vec![
@@ -49,6 +54,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            exit_projectstudio,
             project_repository::save_project_with_initial_prd,
             project_repository::list_projects,
             project_repository::save_prd_revision,

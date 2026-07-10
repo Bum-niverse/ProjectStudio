@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { createProjectService } from "./application/createProjectService";
 import { ProjectValidationError, type ProjectValidationErrors, type ProjectWithPrd } from "./domain/project";
 import { FeatureMap } from "./FeatureMap";
@@ -49,6 +48,7 @@ export default function App() {
   const [isAuthenticating,setIsAuthenticating]=useState(false);
   const [authMessage,setAuthMessage]=useState<string>();
   const [isDeveloperMode,setIsDeveloperMode]=useState(()=>localStorage.getItem("projectstudio:developer-mode")==="true");
+  const[completionError,setCompletionError]=useState<string>();
 
   const selectedProject = projects.find(({ project }) => project.id === selectedProjectId);
   const activeStageIndex = page === "project" ? 0 : page === "prd" ? 1 : page === "features" ? 2 : page === "user-flow" ? 3 : page === "wireframe" ? 4 : page === "export" ? 5 : -1;
@@ -67,7 +67,7 @@ export default function App() {
   async function handleStartGithubLogin(){try{if(!isTauri())throw new Error("GitHub 로그인은 데스크톱 앱에서 사용할 수 있습니다.");await invoke("start_github_login");setAuthMessage("열린 GitHub CLI 창에서 로그인을 완료한 뒤 ‘GitHub로 로그인’을 다시 눌러 주세요.");}catch(error){setAuthMessage(error instanceof Error?error.message:String(error));}}
   function handleDeveloperMode(){const next=!isDeveloperMode;setIsDeveloperMode(next);localStorage.setItem("projectstudio:developer-mode",String(next));}
   function handleLock(){setGithubUser(undefined);setProjects([]);setSelectedProjectId(undefined);setPage("project");setIsLoading(false);}
-  async function handleComplete(){if(isTauri()){await getCurrentWindow().close();return;}window.close();}
+  async function handleComplete(){setCompletionError(undefined);try{if(isTauri()){await invoke("exit_projectstudio");return;}window.close();if(!window.closed)setCompletionError("브라우저 미리보기에서는 창을 자동으로 닫을 수 없습니다.");}catch(error){setCompletionError(error instanceof Error?error.message:"프로그램을 종료하지 못했습니다. 다시 시도해 주세요.");}}
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -181,7 +181,7 @@ export default function App() {
       )}
       {page === "user-flow" && selectedProject && <section className="full-page user-flow-full-page"><UserFlowPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("features")} type="button">이전: 기능명세</button><button onClick={()=>setPage("wireframe")} type="button">다음: 와이어프레임</button></div></section>}
       {page === "wireframe" && selectedProject && <section className="full-page wireframe-full-page"><WireframePage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("user-flow")} type="button">이전: 유저플로우</button><button onClick={()=>setPage("export")} type="button">다음: 내보내기</button></div></section>}
-      {page === "export" && selectedProject && <section className="full-page export-full-page"><ExportPage projectId={selectedProject.project.id} projectName={selectedProject.project.name}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("wireframe")} type="button">이전: 와이어프레임</button><button onClick={()=>void handleComplete()} type="button">완료 및 종료</button></div></section>}
+      {page === "export" && selectedProject && <section className="full-page export-full-page"><ExportPage projectId={selectedProject.project.id} projectName={selectedProject.project.name}/>{completionError&&<p className="completion-error" role="alert">{completionError}</p>}<div className="page-actions"><button className="secondary" onClick={()=>setPage("wireframe")} type="button">이전: 와이어프레임</button><button onClick={()=>void handleComplete()} type="button">완료 및 종료</button></div></section>}
     </main>
   );
 }
