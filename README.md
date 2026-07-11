@@ -40,6 +40,8 @@ pnpm build
 pnpm tauri dev
 ```
 
+Windows에서는 `scripts/start_projectstudio.ps1 -Mode Auto`로 일반 앱을 열고, `-Mode Dev`로 실행하면 Vite HMR을 통해 프론트엔드 변경사항이 실행 중인 창에 실시간 반영됩니다.
+
 브라우저 개발 미리보기는 메모리 저장소를 사용하고, Tauri 데스크톱 앱은 SQLite에 프로젝트와 PRD를 영속 저장합니다.
 
 데스크톱 앱의 설정에서 로컬 Git 저장소를 지정한 뒤 `Codex 문서 동기화`를 실행하면 기능 문서와 변경 목록이 해당 저장소의 `.projectstudio` 폴더에 생성됩니다. API 키나 GitHub 토큰은 ProjectStudio에 저장하지 않습니다.

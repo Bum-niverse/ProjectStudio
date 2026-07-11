@@ -146,3 +146,9 @@
 - 2026-07-11: v0.2.0 private GitHub Release에 EXE·MSI·SHA-256 업로드 및 새 채팅용 ProjectStudio Codex 스킬 추가
 
 브라우저 개발 미리보기는 `InMemoryProjectRepository`, Tauri 데스크톱 앱은 `TauriProjectRepository`를 사용한다. 첫 수직 기능의 완료 조건인 생성·편집·리비전 저장·재조회 경로를 구현했다.
+# 2026-07-12 실행 편의성
+
+- `scripts/start_projectstudio.ps1`에 Auto·Dev·Installed 실행 모드를 추가했다.
+- Auto는 실행 중 창 재사용 → release → debug → 개발 모드 순으로 실행한다.
+- Dev는 기존 고정 빌드를 종료하고 Tauri 개발 서버와 Vite HMR을 실행해 소스 변경을 실시간 반영한다.
+- 일반 실행과 개발 모드를 구분한 바탕화면 바로가기를 제공한다.
