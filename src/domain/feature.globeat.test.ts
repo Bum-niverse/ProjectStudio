@@ -23,6 +23,7 @@ describe("Globeat 인증 기능명세", () => {
     expect(feature?.status).toBe("in_progress");
     expect(feature?.description).toContain("최대 100곡");
     expect(feature?.description).toContain("멜론");
-    expect(feature?.acceptanceCriteria).toHaveLength(3);
+    expect(feature?.acceptanceCriteria).toHaveLength(4);
+    expect(feature?.acceptanceCriteria.some((criterion) => criterion.description.includes("전체 연속 재생"))).toBe(true);
   });
 });
