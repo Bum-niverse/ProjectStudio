@@ -19,7 +19,8 @@ describe("createUserFlowSpec",()=>{
     expect(features.some(feature=>feature.title==="3D 지구본 홈")).toBe(true);
     expect(features.some(feature=>feature.title==="외부 플레이리스트 링크 가져오기")).toBe(true);
     expect(features.some(feature=>feature.title==="플레이리스트 발견 및 외부 재생")).toBe(true);
-    expect(spec.lanes).toHaveLength(6);
+    expect(features.some(feature=>feature.title==="여행 동선과 음악 추억")).toBe(true);
+    expect(spec.lanes).toHaveLength(7);
     expect(spec.nodes.length).toBeGreaterThan(40);
     expect(new Set(spec.lanes.map(lane=>lane.colorKey)).size).toBe(6);
     expect(spec.nodes.some(node=>node.title==="플레이리스트 발행"&&node.kind==="action")).toBe(true);
