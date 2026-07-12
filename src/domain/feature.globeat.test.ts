@@ -22,7 +22,7 @@ describe("Globeat 인증 기능명세", () => {
     const feature = features.find((item) => item.title === "외부 플레이리스트 링크 가져오기");
     expect(feature?.status).toBe("in_progress");
     expect(feature?.description).toContain("최대 100곡");
-    expect(feature?.description).toContain("멜론");
+    expect(feature?.description).toContain("Spotify");
     expect(feature?.acceptanceCriteria).toHaveLength(5);
     expect(feature?.acceptanceCriteria.some((criterion) => criterion.description.includes("전체 연속 재생"))).toBe(true);
     expect(feature?.acceptanceCriteria.some((criterion) => criterion.description.includes("oEmbed"))).toBe(true);

@@ -84,7 +84,7 @@ Globeat 인증 기능군은 Google OAuth, Meta/Facebook OAuth, 일반 이메일 
 
 Globeat의 지도 직접 클릭은 좌표 선택에 그치지 않고 Google Places Nearby Search로 80m 안의 역·시청·공공시설·랜드마크를 확인한다. 공공 인프라 후보를 우선해 서울역 같은 복합 시설에서 상가보다 역을 선택하고, 이름·주소·좌표와 장소 출처를 선택 카드에 표시한다. Nearby Search Pro는 월 5,000건 무료 이후 과금되므로 IP당 분당 10회, 약 100m 좌표 캐시와 거리순 후보 제한을 제품 요구사항으로 유지한다.
 
-Globeat의 플레이리스트 제작은 곡을 하나씩 입력하는 방식보다 외부 재생목록 URL 가져오기를 우선한다. 공개 YouTube·YouTube Music URL은 YouTube Data API로 최대 100곡을 가져오고 각 영상 URL에 원본 `list` ID를 유지해 외부 이동 후 연속 재생한다. Spotify는 사용자 OAuth 연결 후 본인·공동 편집 재생목록 가져오기와 새 재생목록 내보내기를 제공한다. 멜론은 공식 공개 가져오기·쓰기 API가 확인되지 않아 링크 보관 외 자동 동기화를 구현하지 않으며 비공개 API나 스크래핑을 사용하지 않는다.
+Globeat의 플레이리스트 제작은 곡을 하나씩 입력하는 방식보다 외부 재생목록 URL 가져오기를 우선한다. 공식 연동 대상은 YouTube·YouTube Music과 Spotify다. 공개 YouTube·YouTube Music URL은 YouTube Data API로 최대 100곡을 가져오고 각 영상 URL에 원본 `list` ID를 유지해 외부 이동 후 연속 재생한다. Spotify는 사용자 OAuth 연결 후 본인·공동 편집 재생목록 가져오기와 새 재생목록 내보내기를 제공한다.
 
 Spotify 계정 연결은 공식 Authorization Code와 PKCE를 사용한다. 연결 시작 전에 Globeat 세션을 서버에서 재검증하고 콜백 state와 10분 만료 HttpOnly·SameSite 쿠키를 확인한다. 외부 access·refresh token은 서버 전용 키로 AES-256-GCM 암호화하며 일반 클라이언트, 로그, ProjectStudio 문서와 SQLite에는 기록하지 않는다. 연결 해제 시 저장 토큰을 삭제하고 운영 자격 증명이 없으면 연결 가능 상태로 표시하지 않는다.
 
