@@ -17,4 +17,12 @@ describe("Globeat 인증 기능명세", () => {
     expect(feature?.description).toContain("Nearby Search");
     expect(feature?.acceptanceCriteria.some((criterion) => criterion.description.includes("분당 10회"))).toBe(true);
   });
+  it("외부 재생목록 가져오기 정책과 연속 재생 조건을 기록한다", () => {
+    const features = createDevelopmentFeatureSpec("globeat-project", "Globeat");
+    const feature = features.find((item) => item.title === "외부 플레이리스트 링크 가져오기");
+    expect(feature?.status).toBe("in_progress");
+    expect(feature?.description).toContain("최대 100곡");
+    expect(feature?.description).toContain("멜론");
+    expect(feature?.acceptanceCriteria).toHaveLength(3);
+  });
 });

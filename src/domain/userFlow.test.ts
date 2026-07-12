@@ -17,13 +17,14 @@ describe("createUserFlowSpec",()=>{
   it("Globeat은 장소 기반 음악 기능군과 흐름을 만든다",()=>{
     const projectId="globeat-project";const features=createDevelopmentFeatureSpec(projectId,"Globeat");const spec=createUserFlowSpec(projectId,features);
     expect(features.some(feature=>feature.title==="3D 지구본 홈")).toBe(true);
-    expect(features.some(feature=>feature.title==="곡과 Spotify·YouTube 링크 추가")).toBe(true);
+    expect(features.some(feature=>feature.title==="외부 플레이리스트 링크 가져오기")).toBe(true);
     expect(features.some(feature=>feature.title==="플레이리스트 발견 및 외부 재생")).toBe(true);
     expect(spec.lanes).toHaveLength(6);
     expect(spec.nodes.length).toBeGreaterThan(40);
     expect(new Set(spec.lanes.map(lane=>lane.colorKey)).size).toBe(6);
     expect(spec.nodes.some(node=>node.title==="플레이리스트 발행"&&node.kind==="action")).toBe(true);
     expect(spec.nodes.some(node=>node.title==="클릭 좌표 주변 장소 확인"&&node.kind==="action")).toBe(true);
+    expect(spec.nodes.some(node=>node.title==="재생목록 URL 붙여넣기·곡 검토"&&node.kind==="action")).toBe(true);
     expect(spec.nodes.some(node=>node.title==="외부 앱에서 듣기"&&node.kind==="action")).toBe(true);
     expect(spec.nodes.some(node=>node.title==="Google OAuth 로그인"&&node.kind==="screen")).toBe(true);
     expect(spec.nodes.some(node=>node.title==="Meta 계정 인증"&&node.kind==="action")).toBe(true);
