@@ -27,4 +27,11 @@ describe("Globeat 인증 기능명세", () => {
     expect(feature?.acceptanceCriteria.some((criterion) => criterion.description.includes("전체 연속 재생"))).toBe(true);
     expect(feature?.acceptanceCriteria.some((criterion) => criterion.description.includes("oEmbed"))).toBe(true);
   });
+  it("Spotify OAuth 보안 연결을 독립 노드로 기록한다", () => {
+    const features = createDevelopmentFeatureSpec("globeat-project", "Globeat");
+    const feature = features.find((item) => item.title === "Spotify 계정 보안 연결");
+    expect(feature?.status).toBe("in_progress");
+    expect(feature?.description).toContain("AES-256-GCM");
+    expect(feature?.acceptanceCriteria.some((criterion) => criterion.description.includes("10분"))).toBe(true);
+  });
 });
