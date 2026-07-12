@@ -24,6 +24,10 @@ describe("createUserFlowSpec",()=>{
     expect(new Set(spec.lanes.map(lane=>lane.colorKey)).size).toBe(6);
     expect(spec.nodes.some(node=>node.title==="플레이리스트 발행"&&node.kind==="action")).toBe(true);
     expect(spec.nodes.some(node=>node.title==="외부 앱에서 듣기"&&node.kind==="action")).toBe(true);
+    expect(spec.nodes.some(node=>node.title==="Google OAuth 로그인"&&node.kind==="screen")).toBe(true);
+    expect(spec.nodes.some(node=>node.title==="Meta 계정 인증"&&node.kind==="action")).toBe(true);
+    expect(spec.nodes.some(node=>node.title==="일반 이메일 회원가입"&&node.kind==="screen")).toBe(true);
+    expect(spec.nodes.some(node=>node.title==="세션·프로필 확정"&&node.kind==="action")).toBe(true);
     const secondLaneRoot=`flow-${projectId}-explore`;expect(spec.edges.some(edge=>edge.targetNodeId===secondLaneRoot)).toBe(false);
   });
 });
