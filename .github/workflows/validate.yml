@@ -1,0 +1,33 @@
+name: Validate ProjectStudio
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "11.7.0"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+      - name: Install Rust toolchain
+        run: rustup toolchain install 1.97.0 --profile minimal --component rustfmt
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Validate harness structure
+        run: python scripts/validate_harness.py
+      - name: Run project validation
+        run: python scripts/validate.py

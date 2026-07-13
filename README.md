@@ -31,6 +31,8 @@
 
 ## 개발 명령
 
+전체 로컬 검증은 `python scripts/validate.py`를 단일 진입점으로 사용합니다. 명령은 `.codex/validation-commands.json`에 저장되며 프론트 lint·test·build와 Rust fmt·test를 순서대로 실행합니다. 저장소 작업 절차와 보안·UI 검토 Skill은 `.agents/skills/`, 전체 정책은 `docs/agent-guidelines/`에 있습니다.
+
 ```bash
 pnpm install
 pnpm dev

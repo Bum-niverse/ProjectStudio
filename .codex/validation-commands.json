@@ -1,0 +1,9 @@
+{
+  "commands": [
+    { "name": "frontend-lint", "cmd": ["pnpm", "lint"] },
+    { "name": "frontend-test", "cmd": ["pnpm", "test"] },
+    { "name": "frontend-build", "cmd": ["pnpm", "build"] },
+    { "name": "rust-format", "cmd": ["cargo", "fmt", "--check", "--manifest-path", "src-tauri/Cargo.toml"] },
+    { "name": "rust-test", "cmd": ["cargo", "test", "--manifest-path", "src-tauri/Cargo.toml"] }
+  ]
+}

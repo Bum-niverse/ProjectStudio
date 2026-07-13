@@ -86,3 +86,13 @@ UI/UX를 변경하기 전에는 `docs/ui-ux-guidelines.md`를 함께 확인하�
 ## 첫 수직 기능
 
 사용자가 로컬 프로젝트를 만들고 아이디어를 입력하면 구조화된 PRD 초안을 생성·편집하고, 저장한 뒤 프로그램을 다시 열어 같은 PRD를 조회할 수 있게 한다. AI 공급자가 아직 연결되지 않은 단계에서는 교체 가능한 인터페이스와 명시적인 개발 모드만 허용하며, 동작하지 않는 목업을 완료로 표시하지 않는다.
+
+## 프로젝트 하네스
+
+- 비단순 작업은 `.agents/skills/`의 `repository-inspect → task-plan → validate-task → review-diff` 흐름을 적용한다.
+- 인증·권한·개인정보·외부 도구 변경에는 `security-review`, UI 변경에는 `frontend-ui-review`, 데이터 계약 변경에는 `data-quality-review`를 추가한다.
+- 전체 정책은 `docs/agent-guidelines/security.md`와 `docs/agent-guidelines/ui-ux.md`를 따른다. ProjectStudio 고유 규칙과 충돌하면 이 `AGENTS.md`가 우선한다.
+- 공식 통합 검증 진입점은 `python scripts/validate.py`이며 실제 명령은 `.codex/validation-commands.json`에 인자 배열로 관리한다.
+- 기본 검증은 `pnpm lint`, `pnpm test`, `pnpm build`, `cargo fmt --check --manifest-path src-tauri/Cargo.toml`, `cargo test --manifest-path src-tauri/Cargo.toml`이다.
+- SQLite migration은 기존 데이터 보존과 롤백 가능성을 검토하고, Tauri command는 외부 입력 검증과 프로젝트 소유권을 Rust 계층에서 강제한다.
+- `.projectstudio` 동기화와 내보내기는 사용자가 지정한 로컬 경로 안에서만 수행하고 비밀정보·토큰을 산출물이나 검증 보고서에 기록하지 않는다.

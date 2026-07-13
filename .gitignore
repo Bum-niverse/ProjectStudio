@@ -5,3 +5,10 @@ dist/
 src-tauri/target/
 src-tauri/gen/
 work/
+.codex/task-plan.md
+.codex/task-state.json
+.codex/task-log.md
+.codex/validation-report.json
+AGENTS.md.before-harness.bak
+__pycache__/
+*.pyc
