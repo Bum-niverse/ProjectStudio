@@ -23,8 +23,8 @@ type LayoutDensity = "default" | "compact";
 type FeatureNode = Node<FeatureNodeData>;
 const nodeTypes = { feature: FeatureNodeCard };
 const MAGNET_DISTANCE = 34;
-const FEATURE_NODE_LAYOUT_VERSION="branch-spacing-v3";
-const FEATURE_BRANCH_COLOR_VERSION="branch-colors-v1";
+const FEATURE_NODE_LAYOUT_VERSION="branch-spacing-v4";
+const FEATURE_BRANCH_COLOR_VERSION="branch-colors-v2";
 const BRANCH_COLORS:NodeColorKey[]=["green","cyan","amber","violet","rose","slate"];
 
 function colorFeatureBranches(features:FeatureSpec[]):FeatureSpec[]{const root=features.find(feature=>!feature.parentId);if(!root)return features;const rootId=root.id;const byId=new Map(features.map(feature=>[feature.id,feature]));const branches=features.filter(feature=>feature.parentId===rootId).sort((a,b)=>a.sortOrder-b.sortOrder);const branchColors=new Map(branches.map((branch,index)=>[branch.id,BRANCH_COLORS[index%BRANCH_COLORS.length]]));function resolve(feature:FeatureSpec):NodeColorKey{let current=feature;while(current.parentId&&current.parentId!==rootId){const parent=byId.get(current.parentId);if(!parent)break;current=parent;}return branchColors.get(current.id)??"slate";}return features.map(feature=>({...feature,colorKey:feature.id===rootId?"slate":resolve(feature)}));}
@@ -222,7 +222,7 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName }: Feature
         </div>
       </div>
       {mode === "document" ? <FeatureDocumentView features={features} onSave={handleSaveFeature} /> : <div className="feature-canvas" data-view-mode={mode}>
-        <ReactFlow nodes={nodes} edges={edges.map(edge=>({...edge,selected:edge.id===edgeMenu?.id}))} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onEdgeClick={(event,edge)=>{event.stopPropagation();const canvas=(event.currentTarget as Element).closest(".feature-canvas")?.getBoundingClientRect();if(canvas)setEdgeMenu({id:edge.id,target:edge.target,x:event.clientX-canvas.left,y:event.clientY-canvas.top});}} onPaneClick={()=>setEdgeMenu(undefined)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.08, duration: 350, maxZoom: 0.9 }} minZoom={0.12} maxZoom={1.8} panOnScroll proOptions={{hideAttribution:true}}>
+        <ReactFlow nodes={nodes} edges={edges.map(edge=>({...edge,selected:edge.id===edgeMenu?.id}))} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onEdgeClick={(event,edge)=>{event.stopPropagation();const canvas=(event.currentTarget as Element).closest(".feature-canvas")?.getBoundingClientRect();if(canvas)setEdgeMenu({id:edge.id,target:edge.target,x:event.clientX-canvas.left,y:event.clientY-canvas.top});}} onPaneClick={()=>setEdgeMenu(undefined)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.12, duration: 0, maxZoom: 0.9 }} onInit={instance=>requestAnimationFrame(()=>requestAnimationFrame(()=>void instance.fitView({padding:.12,maxZoom:.9,duration:0})))} minZoom={0.12} maxZoom={1.8} panOnScroll proOptions={{hideAttribution:true}}>
           <Background color="var(--theme-border)" gap={24} size={1} />
           <Controls showInteractive={false} />
           <Panel position="bottom-right"><div className="canvas-layout-controls"><button onClick={()=>handleResetLayout("default")} type="button">기본 정렬</button><button onClick={()=>handleResetLayout("compact")} type="button">좁은 정렬</button></div></Panel>
