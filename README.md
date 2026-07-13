@@ -24,6 +24,7 @@
 
 - [MVP 아키텍처와 구현 계획](docs/mvp-architecture.md)
 - [개발 진행](docs/progress.md)
+- [포트폴리오 개발 기록](docs/portfolio-case-study.md)
 - [제품 초안](docs/product-brief.md)
 - [Codex 동기화 계약](docs/codex-sync-contract.md)
 - [UI/UX 설계 및 검수 기준](docs/ui-ux-guidelines.md)
