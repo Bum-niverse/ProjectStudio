@@ -1,5 +1,12 @@
 # ProjectStudio 개발 진행
 
+## 2026-07-14 개발모드 바로가기 재실행 복구
+
+- 이전 Vite 개발 서버가 1420 포트를 점유한 상태에서 바로가기가 무반응처럼 종료되던 원인 수정
+- ProjectStudio 저장소에서 실행된 Vite·Tauri·pnpm 프로세스만 확인해 안전하게 종료한 뒤 개발모드 재시작
+- 다른 프로그램이 1420 포트를 사용하면 임의 종료하지 않고 PID와 프로세스명을 포함한 오류로 중단
+- 데스크톱 `ProjectStudio 개발모드.lnk` 직접 실행으로 Vite와 debug 실행 파일 재시작 확인
+
 ## 2026-07-14 Stock Movement Predictor ML 백테스트
 
 - Codex CLI 없이 시계열 ML 프로젝트를 생성하는 전체 6단계 백테스트 수행

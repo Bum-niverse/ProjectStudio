@@ -15,8 +15,24 @@ function Get-ProjectStudioProcess {
   Get-Process projectstudio -ErrorAction SilentlyContinue
 }
 
+function Stop-ProjectStudioDevelopmentServer {
+  $listeners = Get-NetTCPConnection -LocalPort 1420 -State Listen -ErrorAction SilentlyContinue
+  foreach ($listener in $listeners) {
+    $process = Get-CimInstance Win32_Process -Filter "ProcessId = $($listener.OwningProcess)" -ErrorAction SilentlyContinue
+    if (-not $process) {
+      continue
+    }
+    $commandLine = [string]$process.CommandLine
+    if ($commandLine -notlike "*$root*" -or $commandLine -notmatch 'vite|tauri|pnpm') {
+      throw "포트 1420을 다른 프로그램이 사용 중입니다. PID $($listener.OwningProcess): $($process.Name)"
+    }
+    Stop-Process -Id $listener.OwningProcess -Force -ErrorAction Stop
+  }
+}
+
 function Start-DevelopmentMode {
   Get-ProjectStudioProcess | Stop-Process -Force -ErrorAction SilentlyContinue
+  Stop-ProjectStudioDevelopmentServer
   if (-not (Test-Path -LiteralPath $pnpm)) {
     throw "Bundled pnpm을 찾지 못했습니다: $pnpm"
   }
