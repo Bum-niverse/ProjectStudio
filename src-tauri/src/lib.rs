@@ -68,6 +68,12 @@ pub fn run() {
             sql: include_str!("../migrations/0007_wireframe_pages.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 8,
+            description: "user_flow_metadata",
+            sql: include_str!("../migrations/0008_user_flow_metadata.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
