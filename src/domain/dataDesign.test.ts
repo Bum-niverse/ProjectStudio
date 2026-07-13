@@ -23,6 +23,7 @@ describe("data design review", () => {
     expect(snapshot.datasets[0].source).toContain("확인 필요");
     expect(snapshot.datasets.flatMap(dataset => dataset.variables).some(item => item.role === "target" && item.availableAt.includes("다음 거래일"))).toBe(true);
     expect(snapshot.relationships[0].temporalAlignment).toContain("과거");
+    expect(snapshot.relationships[0].description).toContain("예측 피처");
   });
   it("warns when the data contract is empty", () => {
     expect(reviewDataDesign(initialDataDesign())).toContain("데이터셋 계약이 없습니다. 출처·키·변수와 타깃을 먼저 정의해야 합니다.");

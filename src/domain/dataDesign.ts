@@ -21,7 +21,7 @@ export interface DatasetSpec {
 export interface DatasetRelationship {
   id: string; sourceDatasetId: string; targetDatasetId: string; joinKeys: string; joinType: "inner" | "left" | "right" | "full";
   cardinality: RelationshipCardinality; preserveSourceRows: boolean; duplicateRisk: string; unmatchedPolicy: string;
-  temporalAlignment: string; spatialMapping: string; unitConversion: string;
+  temporalAlignment: string; spatialMapping: string; unitConversion: string; description?: string;
 }
 
 export interface ExecutionTask {
@@ -89,7 +89,7 @@ export function createInitialDataDesign(projectType: ProjectType, subtype: Proje
       ],
     };
     snapshot.datasets = [marketDataset, modelingDataset];
-    snapshot.relationships = [{ id: crypto.randomUUID(), sourceDatasetId: marketDataset.id, targetDatasetId: modelingDataset.id, joinKeys: "symbol, trading_date → symbol, feature_date", joinType: "left", cardinality: "1:1", preserveSourceRows: false, duplicateRisk: "종목·거래일 중복 시 피처 행 증폭", unmatchedPolicy: "거래일 불일치 행을 격리하고 품질 보고서에 기록", temporalAlignment: "종목별 거래 달력 기준으로 과거 방향 정렬", spatialMapping: "symbol 표준화", unitConversion: "가격 통화와 corporate action 처리 정책 확인" }];
+    snapshot.relationships = [{ id: crypto.randomUUID(), sourceDatasetId: marketDataset.id, targetDatasetId: modelingDataset.id, joinKeys: "symbol, trading_date → symbol, feature_date", joinType: "left", cardinality: "1:1", preserveSourceRows: false, duplicateRisk: "종목·거래일 중복 시 피처 행 증폭", unmatchedPolicy: "거래일 불일치 행을 격리하고 품질 보고서에 기록", temporalAlignment: "종목별 거래 달력 기준으로 과거 방향 정렬", spatialMapping: "symbol 표준화", unitConversion: "가격 통화와 corporate action 처리 정책 확인", description: "일별 시장 가격을 예측 피처·타깃 생성 기준에 맞춰 연결합니다." }];
     snapshot.qualityPlan = [...new Set([...snapshot.qualityPlan, "허용 범위", "참조 무결성", "시간 연속성", "클래스 불균형", "단위 일관성", "표본 편향", "데이터 드리프트"])];
     return snapshot;
   }
