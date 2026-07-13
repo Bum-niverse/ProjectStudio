@@ -93,19 +93,30 @@ pub async fn sync_project_documents(
     if !repository.join(".git").is_dir() {
         return Err("선택한 경로는 Git 저장소가 아닙니다.".to_owned());
     }
-    let output_root = repository.join(".projectstudio");
-    let feature_dir = output_root.join("features");
-    let change_dir = output_root.join("changes");
-    fs::create_dir_all(&feature_dir).map_err(|error| error.to_string())?;
-    fs::create_dir_all(&change_dir).map_err(|error| error.to_string())?;
-
     let mut database = open_database(&app).await?;
-    let project = sqlx::query("SELECT name, idea FROM projects WHERE id = ?")
+    let project = sqlx::query("SELECT name, idea, git_repository_path FROM projects WHERE id = ?")
         .bind(&input.project_id)
         .fetch_optional(&mut database)
         .await
         .map_err(|error| error.to_string())?
         .ok_or_else(|| "동기화할 프로젝트를 찾지 못했습니다.".to_owned())?;
+    let stored_repository: Option<String> = project
+        .try_get("git_repository_path")
+        .map_err(|error| error.to_string())?;
+    let stored_repository = stored_repository
+        .ok_or_else(|| "프로젝트에 저장된 Git 저장소를 먼저 연결해 주세요.".to_owned())?;
+    let stored_repository = fs::canonicalize(stored_repository)
+        .map_err(|_| "프로젝트에 저장된 Git 저장소를 찾지 못했습니다.".to_owned())?;
+    if stored_repository != repository {
+        return Err("프로젝트에 저장된 Git 저장소와 요청 경로가 일치하지 않습니다.".to_owned());
+    }
+    // 렌더러가 임의 경로를 전달하더라도 DB에 연결된 저장소를 검증하기 전에는
+    // 어떤 디렉터리나 파일도 만들지 않는다.
+    let output_root = repository.join(".projectstudio");
+    let feature_dir = output_root.join("features");
+    let change_dir = output_root.join("changes");
+    fs::create_dir_all(&feature_dir).map_err(|error| error.to_string())?;
+    fs::create_dir_all(&change_dir).map_err(|error| error.to_string())?;
     let project_name: String = project.try_get("name").map_err(|error| error.to_string())?;
     let idea: String = project.try_get("idea").map_err(|error| error.to_string())?;
     let rows = sqlx::query("SELECT id, parent_feature_id, title, description, status, priority, role FROM features WHERE project_id = ? ORDER BY sort_order")

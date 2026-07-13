@@ -110,7 +110,7 @@ pub async fn save_project_repository_path(
 ) -> Result<String, String> {
     let root = std::fs::canonicalize(input.repository_path.trim())
         .map_err(|_| "선택한 로컬 저장소 경로를 찾을 수 없습니다.".to_owned())?;
-    if !root.join(".git").exists() {
+    if !root.join(".git").is_dir() {
         return Err("선택한 경로는 Git 저장소 루트가 아닙니다.".to_owned());
     }
     let path = root.to_string_lossy().into_owned();
@@ -371,14 +371,14 @@ mod tests {
                 &mut connection,
                 SaveProjectWithPrdInput {
                     project_id: "project-1".to_owned(),
-                    project_name: "Globeat".to_owned(),
-                    idea: "음악으로 도시를 탐색한다.".to_owned(),
+                    project_name: "샘플 프로젝트".to_owned(),
+                    idea: "작업 결과를 저장하고 다시 확인한다.".to_owned(),
                     project_type: "web".to_owned(),
                     project_subtype: None,
                     document_id: "document-1".to_owned(),
                     revision_id: "revision-1".to_owned(),
-                    prd_title: "Globeat PRD".to_owned(),
-                    prd_markdown: "# Globeat PRD".to_owned(),
+                    prd_title: "샘플 프로젝트 PRD".to_owned(),
+                    prd_markdown: "# 샘플 프로젝트 PRD".to_owned(),
                     created_at: "2026-07-10T00:00:00.000Z".to_owned(),
                 },
             )
@@ -391,10 +391,10 @@ mod tests {
 
             assert_eq!(saved.project.id, "project-1");
             assert_eq!(reopened.len(), 1);
-            assert_eq!(reopened[0].project.name, "Globeat");
+            assert_eq!(reopened[0].project.name, "샘플 프로젝트");
             assert_eq!(reopened[0].prd.id, "revision-1");
             assert_eq!(reopened[0].prd.revision_number, 1);
-            assert_eq!(reopened[0].prd.content_markdown, "# Globeat PRD");
+            assert_eq!(reopened[0].prd.content_markdown, "# 샘플 프로젝트 PRD");
         });
     }
 
@@ -419,14 +419,14 @@ mod tests {
 
             let input = SaveProjectWithPrdInput {
                 project_id: "project-1".to_owned(),
-                project_name: "Globeat".to_owned(),
-                idea: "음악으로 도시를 탐색한다.".to_owned(),
+                project_name: "샘플 프로젝트".to_owned(),
+                idea: "작업 결과를 저장하고 다시 확인한다.".to_owned(),
                 project_type: "web".to_owned(),
                 project_subtype: None,
                 document_id: "document-1".to_owned(),
                 revision_id: "revision-1".to_owned(),
-                prd_title: "Globeat PRD".to_owned(),
-                prd_markdown: "# Globeat PRD".to_owned(),
+                prd_title: "샘플 프로젝트 PRD".to_owned(),
+                prd_markdown: "# 샘플 프로젝트 PRD".to_owned(),
                 created_at: "2026-07-10T00:00:00.000Z".to_owned(),
             };
             save_project_with_initial_prd_in_connection(&mut connection, input)
@@ -482,13 +482,13 @@ mod tests {
                 &mut connection,
                 SaveProjectWithPrdInput {
                     project_id: "project-1".to_owned(),
-                    project_name: "Globeat".to_owned(),
-                    idea: "음악으로 도시를 탐색한다.".to_owned(),
+                    project_name: "샘플 프로젝트".to_owned(),
+                    idea: "작업 결과를 저장하고 다시 확인한다.".to_owned(),
                     project_type: "web".to_owned(),
                     project_subtype: None,
                     document_id: "document-1".to_owned(),
                     revision_id: "revision-1".to_owned(),
-                    prd_title: "Globeat PRD".to_owned(),
+                    prd_title: "샘플 프로젝트 PRD".to_owned(),
                     prd_markdown: "# 초안".to_owned(),
                     created_at: "2026-07-10T00:00:00.000Z".to_owned(),
                 },

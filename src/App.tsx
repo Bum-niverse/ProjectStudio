@@ -160,7 +160,7 @@ export default function App() {
           <div className="project-page-grid">
             <form className="project-create-form" onSubmit={handleSubmit} noValidate>
               <label htmlFor="project-name">프로젝트 이름</label>
-              <input id="project-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="예: Globeat" />
+              <input id="project-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="예: 여행 일정 관리" />
               {errors.name && <p className="field-error">{errors.name}</p>}
               <fieldset className="project-type-fieldset"><legend>프로젝트 유형</legend><div className="project-type-options">{PROJECT_TYPES.map(type=><label className={projectType===type.id?"selected":""} key={type.id}><input checked={projectType===type.id} name="project-type" onChange={()=>{setProjectType(type.id);setProjectSubtype(undefined);}} type="radio" value={type.id}/><span><strong>{type.label}</strong><small>{type.description}</small></span></label>)}</div></fieldset>
               {errors.projectType && <p className="field-error">{errors.projectType}</p>}

@@ -4,8 +4,6 @@
 
 앱을 열면 GitHub 로그인 잠금 화면이 먼저 표시됩니다. GitHub CLI로 인증된 사용자는 각자 자신의 Windows 계정에 저장된 로컬 작업대를 열 수 있으며 로그인 전에는 프로젝트 데이터베이스를 읽지 않습니다. 인증 토큰은 ProjectStudio가 저장하지 않고 GitHub CLI의 Windows keyring 세션을 사용합니다. `Bum-niverse` 소유자 계정에만 개발자 모드가 표시됩니다.
 
-첫 실제 사용 프로젝트는 Globeat입니다.
-
 ## 목표
 
 - AI 채팅 기반 기획

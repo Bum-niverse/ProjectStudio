@@ -10,6 +10,17 @@ use std::{
 };
 use tauri::{AppHandle, Manager};
 
+const ALLOWED_FORMATS: &[&str] = &["csv", "pdf", "markdown", "json"];
+const ALLOWED_SECTIONS: &[&str] = &[
+    "project",
+    "prd",
+    "features",
+    "user-flow",
+    "system-design",
+    "data-design",
+];
+const ALLOWED_LLM_TARGETS: &[&str] = &["Codex", "Claude", "Antigravity", "Generic LLM"];
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportProjectInput {
@@ -82,6 +93,27 @@ fn safe_name(value: &str) -> String {
         format!("n_{cleaned}")
     } else {
         cleaned
+    }
+}
+
+fn validate_export_values(values: &[String], allowed: &[&str], label: &str) -> Result<(), String> {
+    if values.len() > allowed.len()
+        || values
+            .iter()
+            .any(|value| !allowed.contains(&value.as_str()))
+    {
+        return Err(format!("지원하지 않는 {label} 값이 포함되어 있습니다."));
+    }
+    Ok(())
+}
+
+fn llm_prompt_filename(target: &str) -> Option<&'static str> {
+    match target {
+        "Codex" => Some("PROMPT-CODEX.md"),
+        "Claude" => Some("PROMPT-CLAUDE.md"),
+        "Antigravity" => Some("PROMPT-ANTIGRAVITY.md"),
+        "Generic LLM" => Some("PROMPT-GENERIC-LLM.md"),
+        _ => None,
     }
 }
 async fn open_database(app: &AppHandle) -> Result<SqliteConnection, String> {
@@ -504,6 +536,12 @@ pub async fn export_project_package(
     if input.formats.is_empty() {
         return Err("내보낼 형식을 하나 이상 선택해 주세요.".to_owned());
     }
+    if input.project_id.trim().is_empty() || input.project_id.len() > 128 {
+        return Err("내보낼 프로젝트 ID를 확인해 주세요.".to_owned());
+    }
+    validate_export_values(&input.formats, ALLOWED_FORMATS, "파일 형식")?;
+    validate_export_values(&input.sections, ALLOWED_SECTIONS, "문서 범위")?;
+    validate_export_values(&input.llm_targets, ALLOWED_LLM_TARGETS, "LLM 대상")?;
     let base = fs::canonicalize(input.output_directory.trim())
         .map_err(|e| format!("내보내기 경로를 열 수 없습니다: {e}"))?;
     if !base.is_dir() {
@@ -525,9 +563,10 @@ pub async fn export_project_package(
         fs::write(output.join(name), &context).map_err(|e| e.to_string())?;
         files.push(name.to_owned());
         for target in &input.llm_targets {
-            let file = format!("PROMPT-{}.md", target.to_uppercase().replace(' ', "-"));
-            fs::write(output.join(&file), prompt(target, name)).map_err(|e| e.to_string())?;
-            files.push(file);
+            let file = llm_prompt_filename(target)
+                .ok_or_else(|| "지원하지 않는 LLM 대상입니다.".to_owned())?;
+            fs::write(output.join(file), prompt(target, name)).map_err(|e| e.to_string())?;
+            files.push(file.to_owned());
         }
     }
     if input.sections.iter().any(|s| s == "system-design") {
@@ -759,7 +798,7 @@ pub async fn export_project_package(
 
 #[cfg(test)]
 mod tests {
-    use super::{csv, prompt};
+    use super::{csv, llm_prompt_filename, prompt, validate_export_values, ALLOWED_LLM_TARGETS};
 
     #[test]
     fn escapes_csv_cells_and_builds_llm_prompt() {
@@ -768,5 +807,17 @@ mod tests {
         assert!(text.contains("project-context.md"));
         assert!(text.contains("데이터 품질"));
         assert!(text.contains("재현성"));
+    }
+
+    #[test]
+    fn rejects_untrusted_export_values_and_uses_fixed_prompt_names() {
+        assert!(validate_export_values(
+            &["../../outside".to_owned()],
+            ALLOWED_LLM_TARGETS,
+            "LLM 대상"
+        )
+        .is_err());
+        assert_eq!(llm_prompt_filename("Codex"), Some("PROMPT-CODEX.md"));
+        assert_eq!(llm_prompt_filename("../../outside"), None);
     }
 }

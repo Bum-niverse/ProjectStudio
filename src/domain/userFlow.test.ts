@@ -50,36 +50,10 @@ describe("createUserFlowSpec",()=>{
     expect(spec.nodes.every(node=>node.title!=="문제 확인 후 다시 시도")).toBe(true);
     expect(spec.edges.length).toBeGreaterThanOrEqual(spec.nodes.length-spec.lanes.length);
   });
-  it("Globeat은 장소 기반 음악 기능군과 흐름을 만든다",()=>{
-    const projectId="globeat-project";const features=createDevelopmentFeatureSpec(projectId,"Globeat");const spec=createUserFlowSpec(projectId,features);
-    expect(features.some(feature=>feature.title==="3D 지구본 홈")).toBe(true);
-    expect(features.some(feature=>feature.title==="외부 플레이리스트 링크 가져오기")).toBe(true);
-    expect(features.some(feature=>feature.title==="플레이리스트 발견 및 외부 재생")).toBe(true);
-    expect(features.some(feature=>feature.title==="여행 동선과 음악 추억")).toBe(true);
-    expect(spec.lanes).toHaveLength(6);
-    expect(spec.lanes.some(lane=>/광고|코인|정책|신고/.test(lane.title))).toBe(false);
-    expect(spec.nodes.length).toBeGreaterThan(40);
-    expect(new Set(spec.lanes.map(lane=>lane.colorKey)).size).toBe(6);
-    expect(spec.nodes.some(node=>node.title==="플레이리스트 발행"&&node.kind==="action")).toBe(true);
-    expect(spec.nodes.some(node=>node.title==="플레이리스트 커버 사진 추가"&&node.kind==="action")).toBe(true);
-    expect(spec.nodes.some(node=>node.title==="YouTube 플레이리스트 링크 입력"&&node.kind==="action")).toBe(true);
-    expect(spec.nodes.some(node=>node.title==="여행 사진 추가"&&node.kind==="action")).toBe(true);
-    expect(spec.nodes.some(node=>node.title==="대표사진 선택"&&node.kind==="action")).toBe(true);
-    expect(spec.nodes.some(node=>node.title==="Google 계정 선택 화면"&&node.kind==="screen")).toBe(true);
-    expect(spec.nodes.some(node=>node.title==="Meta 계정 선택 화면"&&node.kind==="screen")).toBe(true);
-    expect(spec.nodes.some(node=>node.title==="이메일 회원가입 화면"&&node.kind==="screen")).toBe(true);
-    expect(spec.nodes.every(node=>!node.title.includes("콜백")&&!node.title.includes("자동 생성"))).toBe(true);
-    const authAction=spec.nodes.find(node=>node.title==="가입 또는 로그인 방식 선택");
-    const authTargets=spec.edges.filter(edge=>edge.sourceNodeId===authAction?.id).map(edge=>spec.nodes.find(node=>node.id===edge.targetNodeId)?.title);
-    expect(authTargets).toEqual(expect.arrayContaining(["Google 계정 선택 화면","Meta 계정 선택 화면","이메일 회원가입 화면","이메일 로그인 화면"]));
-    expect(spec.nodes.filter(node=>node.title==="프로필 화면")).toHaveLength(4);
-    const secondLaneRoot=`flow-${projectId}-explore`;expect(spec.edges.some(edge=>edge.targetNodeId===secondLaneRoot)).toBe(false);
-  });
-  it("제품 이름과 무관하게 복수 하위 경로를 열 기반으로 분기한다",()=>{
-    const projectId="generic-branch";const features=createDevelopmentFeatureSpec(projectId,"Globeat").map(feature=>{
-      const titles:Record<string,string>={[`${projectId}-onboarding`]:"접속 흐름",[`${projectId}-auth`]:"접속 방식 선택",[`${projectId}-auth-google`]:"경로 A",[`${projectId}-auth-meta`]:"경로 B",[`${projectId}-auth-email-signup`]:"경로 C",[`${projectId}-auth-email-login`]:"경로 D",[`${projectId}-auth-callback-profile`]:"공통 완료 화면"};
-      return titles[feature.id]?{...feature,title:titles[feature.id]}:feature;
-    });const spec=createUserFlowSpec(projectId,features);const choiceActionId=`flow-${projectId}-onboarding-choice`;const targets=spec.edges.filter(edge=>edge.sourceNodeId===choiceActionId).map(edge=>spec.nodes.find(node=>node.id===edge.targetNodeId)?.title);
-    expect(targets).toEqual(expect.arrayContaining(["경로 A 화면","경로 B 화면","경로 C 화면","경로 D 화면"]));expect(spec.nodes.filter(node=>node.laneId===`${projectId}-onboarding`).every(node=>typeof node.depth==="number")).toBe(true);
+  it("프로젝트 이름과 무관하게 같은 아이디어에는 같은 범용 구조를 만든다",()=>{
+    const idea="사용자가 기록을 만들고 저장한 결과를 다시 확인한다.";
+    const first=createDevelopmentFeatureSpec("first","첫 프로젝트",idea).map(({id,parentId,title})=>({id:id.replace(/^first/,"project"),parentId:parentId?.replace(/^first/,"project"),title:title.replace("첫 프로젝트","프로젝트")}));
+    const second=createDevelopmentFeatureSpec("second","두 번째 프로젝트",idea).map(({id,parentId,title})=>({id:id.replace(/^second/,"project"),parentId:parentId?.replace(/^second/,"project"),title:title.replace("두 번째 프로젝트","프로젝트")}));
+    expect(first).toEqual(second);
   });
 });

@@ -4,7 +4,7 @@ import {createDevelopmentFeatureSpec} from "./domain/feature";
 
 describe("feature tree layout",()=>{
   it("기본 정렬은 좁은 정렬보다 연결 관계를 넓게 펼친다",()=>{
-    const features=createDevelopmentFeatureSpec("layout-project","Globeat");
+    const features=createDevelopmentFeatureSpec("layout-project","업무 기록 도구","사용자가 기록을 만들고 저장한 결과를 다시 확인한다.");
     const expanded=layoutFeatures(features,"tree","default");
     const compact=layoutFeatures(features,"tree","compact");
     const childIds=new Set(features.flatMap(feature=>feature.parentId?[feature.parentId]:[]));

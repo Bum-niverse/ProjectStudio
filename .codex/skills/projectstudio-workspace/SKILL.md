@@ -1,6 +1,6 @@
 ---
 name: projectstudio-workspace
-description: Operate the user's ProjectStudio local-first desktop planning workspace. Use when the user asks to open, run, inspect, modify, test, package, export, or continue work on ProjectStudio; mentions its PRD, feature specification, tree, mind map, user flow, wireframe, Globeat workspace, `.projectstudio` documents, or asks to use ProjectStudio in a new chat.
+description: Operate the user's ProjectStudio local-first desktop planning workspace. Use when the user asks to open, run, inspect, modify, test, package, export, or continue work on ProjectStudio; mentions its PRD, feature specification, tree, mind map, user flow, system design, `.projectstudio` documents, or asks to use ProjectStudio in a new chat.
 ---
 
 # ProjectStudio workspace
@@ -18,7 +18,7 @@ Use `-Mode Dev` only when the user asks for live code changes or developer mode.
 1. Read `AGENTS.md`, `README.md`, and `docs/product-brief.md` completely before making changes.
 2. Read `docs/ui-ux-guidelines.md` completely for UI work.
 3. Inspect `git status`, the current branch, and `origin` before editing. Preserve unrelated changes.
-4. Treat Globeat as the first real project while keeping schemas and UI reusable.
+4. Treat every workspace as independent; do not introduce project-name-specific schemas, prompts, or UI.
 5. Do not add libraries, paid APIs, or external AI providers without explaining them first.
 6. Keep ProjectStudio local-first. Authentication does not imply SQLite encryption or cloud sync.
 7. Update relevant product/progress documentation for verified behavior.
