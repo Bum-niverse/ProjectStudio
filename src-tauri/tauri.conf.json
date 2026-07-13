@@ -36,7 +36,7 @@
     "targets": ["nsis", "msi"],
     "category": "DeveloperTool",
     "shortDescription": "로컬 우선 제품 기획 및 개발 추적 도구",
-    "longDescription": "아이디어를 PRD, 기능명세, 유저플로우와 와이어프레임으로 발전시키고 로컬에서 내보내는 개인용 데스크톱 프로그램입니다.",
+    "longDescription": "아이디어를 PRD, 기능명세, 유저플로우와 시스템 설계로 발전시키고 로컬에서 내보내는 개인용 데스크톱 프로그램입니다.",
     "copyright": "Copyright © 2026 Bum-niverse",
     "icon": [
       "icons/32x32.png",

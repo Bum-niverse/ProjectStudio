@@ -3,7 +3,6 @@ mod architecture_drift;
 mod codex_planning;
 mod codex_sync;
 mod codex_system_design;
-mod codex_wireframe;
 mod developer_tools;
 mod feature_change_proposals;
 mod feature_repository;
@@ -12,7 +11,6 @@ mod project_export;
 mod project_repository;
 mod system_design_repository;
 mod user_flow_repository;
-mod wireframe_repository;
 
 use tauri_plugin_sql::{Migration, MigrationKind};
 
@@ -107,7 +105,6 @@ pub fn run() {
             github_auth::get_github_session,
             github_auth::start_github_login,
             codex_sync::sync_project_documents,
-            codex_wireframe::generate_wireframes_with_codex,
             codex_system_design::generate_system_design_with_codex,
             codex_planning::generate_project_plan_with_codex,
             system_design_repository::initialize_system_design,
@@ -120,8 +117,6 @@ pub fn run() {
             user_flow_repository::connect_user_flow_nodes,
             user_flow_repository::create_user_flow_node,
             user_flow_repository::delete_user_flow_node,
-            wireframe_repository::list_wireframe_pages,
-            wireframe_repository::save_wireframe_pages
         ])
         .plugin(
             tauri_plugin_sql::Builder::default()

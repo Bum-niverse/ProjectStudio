@@ -32,7 +32,7 @@ struct ManifestFeature {
 fn system_design_markdown(design: &SystemSnapshot) -> String {
     let mut output = format!("# {}\n\n{}\n\n## 컴포넌트\n", design.title, design.summary);
     for node in &design.nodes {
-        output.push_str(&format!("\n### {} (`{}`)\n\n- 유형: `{}`\n- 기술: {}\n- 배포: {}\n- 상태: {}\n- 기능명세: {}\n- 유저플로우: {}\n- 와이어프레임: {}\n- 코드: {}\n- 테스트: {}\n- 설명: {}\n", node.name, node.id, node.r#type, node.technology, node.deployment, node.status, node.linked_feature_ids.join(", "), node.linked_user_flow_ids.join(", "), node.linked_wireframe_ids.join(", "), node.code_paths.join(", "), node.test_paths.join(", "), node.description));
+        output.push_str(&format!("\n### {} (`{}`)\n\n- 유형: `{}`\n- 기술: {}\n- 배포: {}\n- 상태: {}\n- 기능명세: {}\n- 유저플로우: {}\n- 코드: {}\n- 테스트: {}\n- 설명: {}\n", node.name, node.id, node.r#type, node.technology, node.deployment, node.status, node.linked_feature_ids.join(", "), node.linked_user_flow_ids.join(", "), node.code_paths.join(", "), node.test_paths.join(", "), node.description));
     }
     output.push_str("\n## 연결\n");
     for edge in &design.edges {

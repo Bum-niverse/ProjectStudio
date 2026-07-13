@@ -46,7 +46,7 @@ MVP는 방식 B인 전체 캔버스 JSON snapshot을 선택했다. `system_desig
 
 이 방식은 노드 위치 복원, 리비전 비교, AI 제안 격리, JSON 내보내기가 단순하며 기존 ProjectStudio 문서 리비전 원칙과 일치한다. 노드·연결 단위의 대규모 검색이 필요해지면 별도 인덱스 테이블을 추가할 수 있으나 MVP에서는 과도한 정규화를 피한다.
 
-시스템 설계 마이그레이션은 `src-tauri/migrations/0006_system_designs.sql`, 와이어프레임 영속 페이지는 `0007_wireframe_pages.sql`이며 기존 프로젝트 데이터는 수정하지 않고 새 테이블만 추가한다.
+시스템 설계 마이그레이션은 `src-tauri/migrations/0006_system_designs.sql`이다. `0007_wireframe_pages.sql`은 2026-07-14에 제거된 와이어프레임 기능의 기존 작업공간 호환을 위해 마이그레이션 이력만 보존하며, 현재 제품 흐름에서는 읽거나 쓰지 않는다.
 
 ## JSON 계약
 

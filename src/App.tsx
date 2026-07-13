@@ -9,7 +9,6 @@ import "./theme-audit.css";
 import { SettingsPage } from "./SettingsPage";
 import { applyTheme, loadTheme, type ThemeId } from "./theme";
 import { UserFlowPage } from "./UserFlowPage";
-import { WireframePage } from "./WireframePage";
 import { ExportPage } from "./ExportPage";
 import { LoginPage } from "./LoginPage";
 import { createDevelopmentPrdValues } from "./adapters/developmentPrdGenerator";
@@ -19,20 +18,19 @@ import { generateAndSavePlanningBundle, type PlanningGenerationResult } from "./
 
 interface GithubUser{id:number;login:string;name?:string;avatarUrl:string;isOwner:boolean}
 
-type AppPage = "project" | "prd" | "features" | "user-flow" | "wireframe" | "system-design" | "export" | "settings";
+type AppPage = "project" | "prd" | "features" | "user-flow" | "system-design" | "export" | "settings";
 
 const BASE_STAGES = [
   { id: "project", label: "프로젝트" },
   { id: "prd", label: "PRD" },
   { id: "features", label: "기능명세" },
   { id: "user-flow", label: "유저플로우" },
-  { id: "wireframe", label: "와이어프레임" },
   { id: "system-design", label: "시스템 설계" },
   { id: "export", label: "내보내기" },
 ] as const;
 
 function stagesFor(projectType: ProjectType | undefined) {
-  return BASE_STAGES.filter(stage => stage.id !== "wireframe" || !projectType || isInterfaceProject(projectType)).map(stage =>
+  return BASE_STAGES.map(stage =>
     stage.id === "user-flow" && projectType && !isInterfaceProject(projectType) ? { ...stage, label: "실행 파이프라인" } : stage,
   );
 }
@@ -209,9 +207,8 @@ export default function App() {
           <div className="page-actions"><button className="secondary" onClick={() => setPage("prd")} type="button">이전: PRD</button><button onClick={() => setPage("user-flow")} type="button">다음: 유저플로우</button></div>
         </section>
       )}
-      {page === "user-flow" && selectedProject && <section className="full-page user-flow-full-page"><UserFlowPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} projectIdea={selectedProject.project.idea} projectType={selectedProject.project.projectType} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("features")} type="button">이전: 기능명세</button><button onClick={()=>setPage(isInterfaceProject(selectedProject.project.projectType)?"wireframe":"system-design")} type="button">다음: {isInterfaceProject(selectedProject.project.projectType)?"와이어프레임":"시스템 설계"}</button></div></section>}
-      {page === "wireframe" && selectedProject && isInterfaceProject(selectedProject.project.projectType) && <section className="full-page wireframe-full-page"><WireframePage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("user-flow")} type="button">이전: 유저플로우</button><button onClick={()=>setPage("system-design")} type="button">다음: 시스템 설계</button></div></section>}
-      {page === "system-design" && selectedProject && <section className="full-page system-design-full-page"><SystemDesignPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage(isInterfaceProject(selectedProject.project.projectType)?"wireframe":"user-flow")} type="button">이전: {isInterfaceProject(selectedProject.project.projectType)?"와이어프레임":"실행 파이프라인"}</button><button className="secondary" onClick={()=>setPage("export")} type="button">건너뛰고 내보내기</button><button onClick={()=>setPage("export")} type="button">다음: 내보내기</button></div></section>}
+      {page === "user-flow" && selectedProject && <section className="full-page user-flow-full-page"><UserFlowPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} projectIdea={selectedProject.project.idea} projectType={selectedProject.project.projectType} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("features")} type="button">이전: 기능명세</button><button onClick={()=>setPage("system-design")} type="button">다음: 시스템 설계</button></div></section>}
+      {page === "system-design" && selectedProject && <section className="full-page system-design-full-page"><SystemDesignPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("user-flow")} type="button">이전: {isInterfaceProject(selectedProject.project.projectType)?"유저플로우":"실행 파이프라인"}</button><button className="secondary" onClick={()=>setPage("export")} type="button">건너뛰고 내보내기</button><button onClick={()=>setPage("export")} type="button">다음: 내보내기</button></div></section>}
       {page === "export" && selectedProject && <section className="full-page export-full-page"><ExportPage projectId={selectedProject.project.id} projectName={selectedProject.project.name}/>{completionError&&<p className="completion-error" role="alert">{completionError}</p>}<div className="page-actions"><button className="secondary" onClick={()=>setPage("system-design")} type="button">이전: 시스템 설계</button><button onClick={()=>void handleComplete()} type="button">완료 및 종료</button></div></section>}
     </main>
   );
