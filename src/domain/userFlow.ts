@@ -7,6 +7,12 @@ export interface UserFlowEdge{id:string;projectId:string;sourceNodeId:string;tar
 export interface UserFlowLane{id:string;title:string;requirementId?:string;order?:number;positionY:number;height:number;colorKey?:NodeColorKey}
 export interface UserFlowSpec{nodes:UserFlowNode[];edges:UserFlowEdge[];lanes:UserFlowLane[]}
 
+export function isIncompleteGeneratedFlow(storedNodes:UserFlowNode[],generatedNodes:UserFlowNode[]):boolean{
+  if(!storedNodes.length||storedNodes.length>=generatedNodes.length)return false;
+  const generatedTitles=new Set(generatedNodes.map(node=>node.title));
+  return storedNodes.every(node=>generatedTitles.has(node.title));
+}
+
 export function reconcileUserFlowLanes(nodes:UserFlowNode[],generatedLanes:UserFlowLane[]):{nodes:UserFlowNode[];lanes:UserFlowLane[];didRemap:boolean}{
   const persistedLaneIds=[...new Set(nodes.map(node=>node.laneId))];
   if(!nodes.length)return{nodes,lanes:generatedLanes,didRemap:false};
