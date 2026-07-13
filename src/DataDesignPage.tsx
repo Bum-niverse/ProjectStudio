@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Background, Controls, MarkerType, ReactFlow, type Edge, type Node } from "@xyflow/react";
 import { createDataDesignRepository } from "./adapters/dataDesignRepository";
-import { DATA_QUALITY_RULES, createDataDesignProposal, createExecutionTasks, emptyDataset, emptyVariable, reviewDataDesign, type DataDesignProposal, type DataDesignRevision, type DataDesignSnapshot, type DatasetRelationship, type DatasetSpec, type ExecutionTask, type VariableSpec } from "./domain/dataDesign";
+import { DATA_QUALITY_RULES, createDataDesignProposal, createExecutionTasks, createInitialDataDesign, emptyDataset, emptyVariable, reviewDataDesign, type DataDesignProposal, type DataDesignRevision, type DataDesignSnapshot, type DatasetRelationship, type DatasetSpec, type ExecutionTask, type VariableSpec } from "./domain/dataDesign";
 import type { ProjectSubtype, ProjectType } from "./domain/project";
 
-interface Props { projectId: string; projectType: ProjectType; projectSubtype?: ProjectSubtype }
+interface Props { projectId: string; projectName: string; projectIdea: string; projectType: ProjectType; projectSubtype?: ProjectSubtype }
 type View = "datasets" | "relationships" | "tasks" | "proposals";
 
-export function DataDesignPage({ projectId, projectType, projectSubtype }: Props) {
+export function DataDesignPage({ projectId, projectName, projectIdea, projectType, projectSubtype }: Props) {
   const repository = useMemo(() => createDataDesignRepository(), []);
   const [revision, setRevision] = useState<DataDesignRevision>();
   const [snapshot, setSnapshot] = useState<DataDesignSnapshot>();
   const [selectedId, setSelectedId] = useState<string>();
   const [view, setView] = useState<View>("datasets");
   const [message, setMessage] = useState("데이터 설계를 불러오는 중입니다.");
-  useEffect(() => { void repository.initialize(projectId).then(value => { setRevision(value); setSnapshot(value.snapshot); setSelectedId(value.snapshot.datasets[0]?.id); setMessage(`리비전 ${value.revisionNumber}을 불러왔습니다.`); }).catch(error => setMessage(error instanceof Error ? error.message : String(error))); }, [projectId, repository]);
+  useEffect(() => { const initialSnapshot = createInitialDataDesign(projectType, projectSubtype, projectName, projectIdea); void repository.initialize(projectId, initialSnapshot).then(value => { setRevision(value); setSnapshot(value.snapshot); setSelectedId(value.snapshot.datasets[0]?.id); setMessage(`리비전 ${value.revisionNumber}을 불러왔습니다.`); }).catch(error => setMessage(error instanceof Error ? error.message : String(error))); }, [projectId, projectIdea, projectName, projectSubtype, projectType, repository]);
   if (!snapshot || !revision) return <section className="data-design-page"><p role="status">{message}</p></section>;
   const selected = snapshot.datasets.find(item => item.id === selectedId);
   const warnings = reviewDataDesign(snapshot);

@@ -57,6 +57,54 @@ export function initialDataDesign(): DataDesignSnapshot {
   return { datasets: [], relationships: [], qualityPlan: ["필수 컬럼", "스키마", "타입", "결측률", "중복률", "키 유일성", "데이터 누수"], executionTasks: [], proposals: [] };
 }
 
+const variable = (sourceName: string, standardName: string, description: string, dataType: string, role: VariableRole, options: Partial<VariableSpec> = {}): VariableSpec => ({
+  ...emptyVariable(), sourceName, standardName, description, dataType, role, ...options,
+});
+
+export function createInitialDataDesign(projectType: ProjectType, subtype: ProjectSubtype | undefined, projectName: string, projectIdea: string): DataDesignSnapshot {
+  const snapshot = initialDataDesign();
+  if (projectType !== "machine_learning" && projectType !== "data_analysis") return snapshot;
+  const context = `${projectName} ${projectIdea}`.toLowerCase();
+  const isMarketDirection = /주가|stock|ohlcv|종가|수익률|거래량/.test(context) && /방향|상승|하락|movement|분류|예측/.test(context);
+  if (projectType === "machine_learning" && (subtype === "time_series_forecasting" || isMarketDirection)) {
+    const marketDataset: DatasetSpec = {
+      ...emptyDataset(), name: "일별 시장 가격 원본", domain: "시장 시계열", description: "[제안] 예측 시점 이전에 공개된 종목별 일별 OHLCV 원본 계약입니다. 실제 제공자·라이선스·수정주가 반영 시점은 사용자가 확정해야 합니다.",
+      source: "공개 시장 데이터 제공자 — 확인 필요", collectionMethod: "공식 API 또는 사용 허가된 파일", format: "CSV 또는 Parquet", storageLocation: "data/raw/market", timeGrain: "거래일", spatialGrain: "종목", primaryKeys: "symbol, trading_date", refreshCycle: "거래일 단위", accessPolicy: "연구·포트폴리오 목적의 이용 약관과 재배포 범위 확인", isRawMutable: false,
+      variables: [
+        variable("symbol", "symbol", "종목 식별자", "string", "identifier", { allowsMissing: false, availableAt: "수집 시점" }),
+        variable("date", "trading_date", "거래일", "date", "identifier", { allowsMissing: false, availableAt: "해당 거래일" }),
+        ...["open", "high", "low", "close"].map(name => variable(name, name, `${name.toUpperCase()} 가격`, "number", "input", { unit: "통화", allowsMissing: false, availableAt: "해당 거래일 장 마감 후" })),
+        variable("volume", "volume", "거래량", "integer", "input", { unit: "주", allowsMissing: false, availableAt: "해당 거래일 장 마감 후" }),
+      ],
+    };
+    const modelingDataset: DatasetSpec = {
+      ...emptyDataset(), name: "예측 피처·타깃 테이블", domain: "모델링", description: "[제안] 원본 시장 데이터에서 예측 기준 시점까지 확정된 값만 사용해 생성하는 학습 계약입니다.", source: "일별 시장 가격 원본에서 파생", collectionMethod: "재현 가능한 피처 파이프라인", format: "Parquet", storageLocation: "data/processed/features", timeGrain: "종목 × 거래일", spatialGrain: "종목", primaryKeys: "symbol, feature_date", refreshCycle: "실험별", accessPolicy: "원본 제공자의 이용 범위를 승계", isRawMutable: false,
+      variables: [
+        variable("symbol", "symbol", "종목 식별자", "string", "identifier", { allowsMissing: false, availableAt: "피처 생성 시점" }),
+        variable("feature_date", "feature_date", "예측 입력 기준 거래일", "date", "identifier", { allowsMissing: false, availableAt: "예측 기준일 장 마감 후" }),
+        variable("return_1d", "return_1d", "직전 1거래일 수익률", "number", "input", { isDerived: true, derivation: "close(t) / close(t-1) - 1", availableAt: "예측 기준일 장 마감 후", leakageRisk: "분할 경계 밖 가격 참조 금지" }),
+        variable("sma_5", "sma_5", "5거래일 이동평균", "number", "input", { isDerived: true, derivation: "t 시점까지의 close 5개 평균", availableAt: "예측 기준일 장 마감 후", leakageRisk: "centered rolling 금지" }),
+        variable("volatility_20", "volatility_20", "20거래일 수익률 변동성", "number", "input", { isDerived: true, derivation: "t 시점까지의 return 표준편차", availableAt: "예측 기준일 장 마감 후", leakageRisk: "미래 윈도우 포함 금지" }),
+        variable("target_next_day_up", "target_next_day_up", "다음 거래일 종가 상승 여부", "boolean", "target", { isDerived: true, derivation: "close(t+1) > close(t)", categories: "true,false", allowsMissing: false, availableAt: "다음 거래일 장 마감 후", leakageRisk: "학습 레이블 생성에만 사용하고 입력 피처에서 제외" }),
+      ],
+    };
+    snapshot.datasets = [marketDataset, modelingDataset];
+    snapshot.relationships = [{ id: crypto.randomUUID(), sourceDatasetId: marketDataset.id, targetDatasetId: modelingDataset.id, joinKeys: "symbol, trading_date → symbol, feature_date", joinType: "left", cardinality: "1:1", preserveSourceRows: false, duplicateRisk: "종목·거래일 중복 시 피처 행 증폭", unmatchedPolicy: "거래일 불일치 행을 격리하고 품질 보고서에 기록", temporalAlignment: "종목별 거래 달력 기준으로 과거 방향 정렬", spatialMapping: "symbol 표준화", unitConversion: "가격 통화와 corporate action 처리 정책 확인" }];
+    snapshot.qualityPlan = [...new Set([...snapshot.qualityPlan, "허용 범위", "참조 무결성", "시간 연속성", "클래스 불균형", "단위 일관성", "표본 편향", "데이터 드리프트"])];
+    return snapshot;
+  }
+  const dataset = emptyDataset();
+  dataset.name = projectType === "machine_learning" ? "학습 데이터 계약 — 확인 필요" : "분석 데이터 계약 — 확인 필요";
+  dataset.description = "[제안] 아이디어에서 확인된 데이터 범위를 사용자가 출처·키·변수 단위로 확정하기 위한 초기 계약입니다.";
+  dataset.source = "미정 — 사용자 확인 필요";
+  dataset.primaryKeys = "미정 — 사용자 확인 필요";
+  dataset.variables = projectType === "machine_learning"
+    ? [variable("observed_at", "observed_at", "관측 기준 시점", "datetime", "identifier", { availableAt: "수집 시점" }), variable("target", "target", "예측 대상 — 정의 필요", "unknown", "target", { availableAt: "예측 horizon 이후", leakageRisk: "입력 사용 금지" })]
+    : [variable("observed_at", "observed_at", "분석 관측 시점", "datetime", "identifier", { availableAt: "수집 시점" })];
+  snapshot.datasets = [dataset];
+  return snapshot;
+}
+
 export function normalizeDataDesign(value: Partial<DataDesignSnapshot>): DataDesignSnapshot {
   return { datasets: value.datasets ?? [], relationships: value.relationships ?? [], qualityPlan: value.qualityPlan ?? [], executionTasks: value.executionTasks ?? [], proposals: value.proposals ?? [] };
 }
@@ -96,8 +144,12 @@ export function createDataDesignProposal(snapshot: DataDesignSnapshot): DataDesi
 
 export function reviewDataDesign(snapshot: DataDesignSnapshot): string[] {
   const warnings: string[] = [];
+  if (!snapshot.datasets.length) warnings.push("데이터셋 계약이 없습니다. 출처·키·변수와 타깃을 먼저 정의해야 합니다.");
   for (const dataset of snapshot.datasets) {
     if (!dataset.source.trim()) warnings.push(`${dataset.name}: 데이터 출처가 정해지지 않았습니다.`);
+    if (/확인 필요|미정/.test(dataset.source)) warnings.push(`${dataset.name}: 제안된 데이터 출처를 실제 제공자와 이용 조건으로 확정해야 합니다.`);
+    if (!dataset.period.trim()) warnings.push(`${dataset.name}: 수집·분석 기간이 정해지지 않았습니다.`);
+    if (!dataset.license.trim()) warnings.push(`${dataset.name}: 라이선스와 재배포 가능 범위를 확인해야 합니다.`);
     if (!dataset.primaryKeys.trim()) warnings.push(`${dataset.name}: 주요 키가 정해지지 않았습니다.`);
     if (!dataset.variables.length) warnings.push(`${dataset.name}: 변수 사전이 비어 있습니다.`);
     if (dataset.isRawMutable) warnings.push(`${dataset.name}: 원본 데이터를 직접 수정하는 계획입니다.`);

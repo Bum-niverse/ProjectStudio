@@ -78,7 +78,7 @@ export function reviewSystemDesign(snapshot:SystemDesignSnapshot):SystemDesignWa
   for(const node of snapshot.nodes){
     if(!connected.has(node.id)&&snapshot.nodes.length>1)warnings.push({id:`disconnected-${node.id}`,kind:"disconnected",targetId:node.id,message:`‘${node.name}’ 노드가 다른 컴포넌트와 연결되지 않았습니다.`});
     if(!node.linkedFeatureIds.length)warnings.push({id:`feature-${node.id}`,kind:"unlinked_feature",targetId:node.id,message:`‘${node.name}’ 노드에 연결된 기능명세가 없습니다.`});
-    if(node.type==="service"&&/저장|상태|기록|관리/.test(`${node.name} ${node.description}`)&&!snapshot.edges.some(edge=>edge.source===node.id&&["database","cache"].includes(snapshot.nodes.find(item=>item.id===edge.target)?.type??"")))warnings.push({id:`store-${node.id}`,kind:"missing_datastore",targetId:node.id,message:`‘${node.name}’ 서비스는 상태를 다루지만 연결된 저장소가 보이지 않습니다.`});
+    if(!node.dataMlType&&node.type==="service"&&/저장|상태|기록|관리/.test(`${node.name} ${node.description}`)&&!snapshot.edges.some(edge=>edge.source===node.id&&["database","cache"].includes(snapshot.nodes.find(item=>item.id===edge.target)?.type??"")))warnings.push({id:`store-${node.id}`,kind:"missing_datastore",targetId:node.id,message:`‘${node.name}’ 서비스는 상태를 다루지만 연결된 저장소가 보이지 않습니다.`});
   }
   for(const edge of snapshot.edges){
     if(!ids.has(edge.source)||!ids.has(edge.target))warnings.push({id:`missing-${edge.id}`,kind:"missing_node",targetId:edge.id,message:`‘${edge.id}’ 연결이 존재하지 않는 노드를 참조합니다.`});
@@ -113,7 +113,8 @@ export function createDataMlSystemDesign(projectId:string,features:FeatureSpec[]
   return{schemaVersion:1,title:isMl?"ML 파이프라인 설계":"데이터 시스템 설계",summary:"데이터 출처부터 검증·처리·분석 또는 학습·평가·산출물까지 계보를 추적합니다.",viewType:"structural",architecturePattern:"pipeline",activeC4Level:"container",qualityAttributes:["재현성","데이터 무결성","추적성"],constraints:["원본 데이터 불변","승인 전 모델·결론 확정 금지"],nodes,edges};
 }
 
-export function createInitialSystemDesign(projectId:string,features:FeatureSpec[],flows:UserFlowNode[]):SystemDesignSnapshot{
+export function createInitialSystemDesign(projectId:string,features:FeatureSpec[],flows:UserFlowNode[],projectType?:ProjectType,subtype?:ProjectSubtype):SystemDesignSnapshot{
+  if(projectType==="machine_learning"||projectType==="data_analysis")return createDataMlSystemDesign(projectId,features,flows,projectType,subtype);
   const planningText=features.map(feature=>`${feature.title} ${feature.description}`).join(" ");
   if(/모델|학습|예측|타깃|추천|분류|회귀/.test(planningText))return createDataMlSystemDesign(projectId,features,flows,"machine_learning");
   if(/데이터셋|데이터 품질|통계|탐색적 분석|시계열 분석|대시보드/.test(planningText))return createDataMlSystemDesign(projectId,features,flows,"data_analysis");
