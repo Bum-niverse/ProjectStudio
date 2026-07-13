@@ -6,6 +6,8 @@ ProjectStudio에서 수정한 기획 문서를 Codex가 안정적인 파일 경�
 
 SQLite는 편집 데이터의 단일 원본이다. Markdown과 JSON은 Codex 및 외부 도구를 위한 동기화 산출물이며 직접 수정된 경우에는 가져오기 전 비교·승인을 거친다.
 
+시스템 설계가 저장된 프로젝트는 `.projectstudio/system-design.json` 원본 snapshot과 `.projectstudio/system-design.md` 요약을 함께 생성한다. `manifest.json`의 `systemDesign`은 두 경로와 노드·연결 개수를 제공하며, 변경 시 `changes/latest.json`에 `entityType: system-design` 항목을 기록한다. 노드의 기능명세·유저플로우·와이어프레임 ID와 코드·테스트 경로는 구현 영향 분석의 안정 연결점이다.
+
 ## 저장 구조
 
 연결된 개발 저장소 아래에 다음 구조를 생성한다.

@@ -1,5 +1,6 @@
 mod app_environment;
 mod codex_sync;
+mod codex_system_design;
 mod codex_wireframe;
 mod developer_tools;
 mod feature_change_proposals;
@@ -7,6 +8,7 @@ mod feature_repository;
 mod github_auth;
 mod project_export;
 mod project_repository;
+mod system_design_repository;
 mod user_flow_repository;
 
 use tauri_plugin_sql::{Migration, MigrationKind};
@@ -51,6 +53,12 @@ pub fn run() {
             sql: include_str!("../migrations/0005_node_crud_and_colors.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 6,
+            description: "system_designs",
+            sql: include_str!("../migrations/0006_system_designs.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -78,6 +86,11 @@ pub fn run() {
             github_auth::start_github_login,
             codex_sync::sync_project_documents,
             codex_wireframe::generate_wireframes_with_codex,
+            codex_system_design::generate_system_design_with_codex,
+            system_design_repository::initialize_system_design,
+            system_design_repository::save_system_design_revision,
+            system_design_repository::create_system_design_proposal,
+            system_design_repository::decide_system_design_proposal,
             user_flow_repository::initialize_user_flow,
             user_flow_repository::update_user_flow_node,
             user_flow_repository::connect_user_flow_nodes,

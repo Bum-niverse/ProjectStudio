@@ -1,3 +1,4 @@
+use crate::system_design_repository::SystemSnapshot;
 use serde::{Deserialize, Serialize};
 use sqlx::{Connection, Row, SqliteConnection};
 use std::{
@@ -30,6 +31,7 @@ struct ProjectData {
     prd: String,
     features: Vec<FeatureRow>,
     flows: Vec<FlowRow>,
+    system_design: Option<SystemSnapshot>,
 }
 struct FeatureRow {
     id: String,
@@ -130,12 +132,16 @@ async fn load_data(app: &AppHandle, project_id: &str) -> Result<ProjectData, Str
         });
     }
     let flows=sqlx::query("SELECT id,lane_id,title,description,kind FROM user_flow_nodes WHERE project_id=? ORDER BY position_y,position_x").bind(project_id).fetch_all(&mut db).await.map_err(|e|e.to_string())?.into_iter().map(|row|Ok(FlowRow{id:row.try_get("id").map_err(|e|e.to_string())?,lane_id:row.try_get("lane_id").map_err(|e|e.to_string())?,title:row.try_get("title").map_err(|e|e.to_string())?,description:row.try_get("description").map_err(|e|e.to_string())?,kind:row.try_get("kind").map_err(|e|e.to_string())?})).collect::<Result<Vec<_>,String>>()?;
+    let system_design = sqlx::query_scalar::<_, String>("SELECT r.snapshot_json FROM system_designs d JOIN system_design_revisions r ON r.id=d.current_revision_id WHERE d.project_id=?")
+        .bind(project_id).fetch_optional(&mut db).await.map_err(|e|e.to_string())?
+        .map(|value| serde_json::from_str(&value).map_err(|e| format!("시스템 설계 데이터가 손상되었습니다: {e}"))).transpose()?;
     Ok(ProjectData {
         name,
         idea,
         prd,
         features,
         flows,
+        system_design,
     })
 }
 fn markdown(data: &ProjectData, sections: &[String]) -> String {
@@ -160,6 +166,42 @@ fn markdown(data: &ProjectData, sections: &[String]) -> String {
                 flow.kind, flow.title, flow.description, flow.lane_id
             ));
         }
+    }
+    if sections.iter().any(|s| s == "system-design") {
+        if let Some(design) = &data.system_design {
+            out.push_str(&format!("\n## 시스템 설계\n\n{}\n", design.summary));
+            for node in &design.nodes {
+                out.push_str(&format!("\n### {} (`{}`)\n\n- 유형/기술: {} / {}\n- 배포: {}\n- 설명: {}\n- 기능 링크: {}\n- 코드: {}\n", node.name, node.id, node.r#type, node.technology, node.deployment, node.description, node.linked_feature_ids.join(", "), node.code_paths.join(", ")));
+            }
+            out.push_str("\n### 연결\n");
+            for edge in &design.edges {
+                out.push_str(&format!(
+                    "\n- `{}` → `{}`: {} / {} / {}\n",
+                    edge.source, edge.target, edge.r#type, edge.protocol, edge.description
+                ));
+            }
+        } else {
+            out.push_str("\n## 시스템 설계\n\n아직 저장된 시스템 설계가 없습니다.\n");
+        }
+    }
+    out
+}
+fn system_design_mermaid(design: &SystemSnapshot) -> String {
+    let mut out = String::from("flowchart LR\n");
+    for node in &design.nodes {
+        out.push_str(&format!(
+            "  {}[\"{}\"]\n",
+            safe_name(&node.id),
+            node.name.replace('"', "'")
+        ));
+    }
+    for edge in &design.edges {
+        out.push_str(&format!(
+            "  {} -->|{}| {}\n",
+            safe_name(&edge.source),
+            edge.protocol.replace('|', "/"),
+            safe_name(&edge.target)
+        ));
     }
     out
 }
@@ -198,6 +240,19 @@ fn report_html(data: &ProjectData, sections: &[String]) -> String {
             ));
         }
         body.push_str("</tbody></table></section>");
+    }
+    if sections.iter().any(|s| s == "system-design") {
+        body.push_str("<section><h2>시스템 설계</h2>");
+        if let Some(design) = &data.system_design {
+            body.push_str(&format!("<p>{}</p><table><thead><tr><th>컴포넌트</th><th>유형·기술</th><th>연결된 기획</th></tr></thead><tbody>", html(&design.summary)));
+            for node in &design.nodes {
+                body.push_str(&format!("<tr><td><strong>{}</strong><br><small>{}</small></td><td>{}<br>{}</td><td>{}</td></tr>", html(&node.name), html(&node.description), html(&node.r#type), html(&node.technology), html(&node.linked_feature_ids.join(", "))));
+            }
+            body.push_str("</tbody></table>");
+        } else {
+            body.push_str("<p>아직 저장된 시스템 설계가 없습니다.</p>");
+        }
+        body.push_str("</section>");
     }
     format!("<!doctype html><html lang='ko'><meta charset='utf-8'><style>@page{{size:A4;margin:16mm}}html,body{{background:#fff}}body{{font-family:'Malgun Gothic','Segoe UI',sans-serif;color:#202124;font-size:9pt;line-height:1.5}}h1{{font-size:25pt;border-bottom:3px solid #202124;padding-bottom:8px}}h2{{font-size:16pt;margin-top:24px;page-break-after:avoid}}pre{{white-space:pre-wrap;font-family:'Malgun Gothic',sans-serif}}table{{width:100%;border-collapse:collapse;font-size:8pt}}thead{{display:table-header-group}}tr{{page-break-inside:avoid}}th,td{{padding:7px;border:1px solid #d0d0d0;vertical-align:top;text-align:left}}th{{background:#f0f0f0}}small,.meta{{color:#666}}</style><body><p class='meta'>ProjectStudio 기획 데이터 내보내기</p><h1>{}</h1>{}</body></html>",html(&data.name),body)
 }
@@ -276,6 +331,26 @@ pub async fn export_project_package(
             let file = format!("PROMPT-{}.md", target.to_uppercase().replace(' ', "-"));
             fs::write(output.join(&file), prompt(target, name)).map_err(|e| e.to_string())?;
             files.push(file);
+        }
+    }
+    if input.sections.iter().any(|s| s == "system-design") {
+        if let Some(design) = &data.system_design {
+            if input.formats.iter().any(|f| f == "json") {
+                fs::write(
+                    output.join("system-design.json"),
+                    serde_json::to_string_pretty(design).map_err(|e| e.to_string())?,
+                )
+                .map_err(|e| e.to_string())?;
+                files.push("system-design.json".to_owned());
+            }
+            if input.formats.iter().any(|f| f == "markdown") {
+                fs::write(
+                    output.join("system-design.mmd"),
+                    system_design_mermaid(design),
+                )
+                .map_err(|e| e.to_string())?;
+                files.push("system-design.mmd".to_owned());
+            }
         }
     }
     if input.formats.iter().any(|f| f == "csv") && input.sections.iter().any(|s| s == "features") {

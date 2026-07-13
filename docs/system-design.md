@@ -1,0 +1,78 @@
+# 시스템 설계 캔버스
+
+## 제품 목적
+
+시스템 설계는 기능명세와 유저플로우를 서비스, 데이터 저장소, 외부 시스템, 통신 관계와 연결하고 Codex가 구현 문맥으로 읽을 수 있게 만드는 선택 단계다. 범용 드로잉 도구가 아니라 `기획 안정 ID → 시스템 컴포넌트 → 코드·테스트 경로` 추적에 초점을 둔다.
+
+전체 흐름은 `프로젝트 → PRD → 기능명세 → 유저플로우 → 와이어프레임 → 시스템 설계 → 내보내기`다. 시스템 설계가 불필요한 프로젝트는 건너뛸 수 있다.
+
+## UI 구조와 사용자 흐름
+
+- 왼쪽 팔레트: Client, Service, Database, Cache, Queue, External System, Generic Component, Group 추가, 선택 노드 복제·삭제
+- 중앙 캔버스: React Flow 기반 이동, 연결, 확대·축소, 미니맵, 좌→우 기본 정렬
+- 오른쪽 상세: 노드 메타데이터와 기획·코드·테스트 링크, 연결 프로토콜·인증·오류 처리 편집
+- 선택 해제 상태: 규칙 기반 검토와 Codex 변경안 생성·승인·거절
+- 저장: 명시적인 `새 리비전 저장`으로 현재 편집본을 불변 리비전으로 확정한다.
+
+## 데이터 모델
+
+MVP는 방식 B인 전체 캔버스 JSON snapshot을 선택했다. `system_designs`는 현재 리비전을 가리키고, `system_design_revisions`는 각 snapshot을 불변 저장한다. `system_design_proposals`는 AI 제안을 현재 원본과 분리한다.
+
+이 방식은 노드 위치 복원, 리비전 비교, AI 제안 격리, JSON 내보내기가 단순하며 기존 ProjectStudio 문서 리비전 원칙과 일치한다. 노드·연결 단위의 대규모 검색이 필요해지면 별도 인덱스 테이블을 추가할 수 있으나 MVP에서는 과도한 정규화를 피한다.
+
+마이그레이션은 `src-tauri/migrations/0006_system_designs.sql`이며 기존 프로젝트 데이터는 수정하지 않고 새 테이블만 추가한다.
+
+## JSON 계약
+
+최상위 snapshot은 `schemaVersion`, `title`, `summary`, `nodes`, `edges`를 가진다.
+
+- 노드: 안정 ID, 유형, 이름, 설명, 기술, 배포 위치, 상태, 기능·유저플로우·와이어프레임 ID, 코드·테스트 경로, 설정, 위치와 크기
+- 연결: 안정 ID, source/target 노드 ID, 유형, 프로토콜, 데이터 형식, 동기 여부, 인증, 오류 처리, 설명
+- 검증: 빈·중복 ID, 존재하지 않는 대상, 자기 연결, 중복 연결, 비정상 좌표·크기를 저장 및 AI 반영 전에 차단한다.
+
+와이어프레임은 현재 별도 영속 ID 저장소가 없으므로 MVP에서는 노드 상세에서 페이지 ID를 직접 입력한다. 와이어프레임 저장 계약이 추가되면 목록 선택 방식으로 교체한다.
+
+## 리비전과 AI 변경안
+
+사용자 저장은 새 리비전을 생성한다. Codex는 현재 snapshot과 기능명세·유저플로우를 입력으로 받고 JSON Schema에 맞는 완전한 제안 snapshot을 반환한다. 제안은 `pending` 상태로 별도 저장되며 승인 전 현재 설계를 변경하지 않는다. 승인 시 기준 리비전이 현재 리비전인지 다시 확인하고 새 리비전을 만든다. 기준이 달라졌으면 재생성을 요구한다. 거절은 원본을 유지한다.
+
+Codex CLI는 ephemeral·read-only sandbox로 실행하며 출력 개수와 시간 제한을 적용한다. 유료 API는 사용하지 않는다.
+
+## 설계 검토 규칙
+
+검토 결과는 정답 판정이 아닌 `검토 필요` 경고다.
+
+- 연결되지 않은 노드와 기능명세 링크가 없는 노드
+- 상태를 다루지만 저장소 연결이 보이지 않는 서비스
+- 오류 처리 없는 외부 시스템 연결
+- 인증 정보가 없는 HTTP 연결
+- 클라이언트의 데이터베이스 직접 연결
+- 프로토콜 누락, 존재하지 않는 노드, 순환 의존성 가능성
+
+## 내보내기와 Codex 동기화
+
+- `project-context.md`: 선택한 전체 문맥과 시스템 설계
+- `system-design.json`: 원본 snapshot
+- `system-design.mmd`: Mermaid `flowchart LR`
+- `project-report.pdf`: 시스템 설계 요약 표
+- `.projectstudio/system-design.json`, `.projectstudio/system-design.md`: Git 저장소 동기화 문서
+- `.projectstudio/manifest.json`: `systemDesign` 경로와 노드·연결 개수
+- `.projectstudio/changes/latest.json`: snapshot 변경 기록
+
+## MVP 범위와 제외
+
+포함: 기본 노드·연결 편집, 위치 복원, SQLite 리비전, 기능·유저플로우 링크, 수동 와이어프레임 ID, Codex 제안 승인·거절, 규칙 검토, Markdown·JSON·PDF·Mermaid 출력.
+
+제외: 클라우드 전체 아이콘, Terraform/Kubernetes 생성, 실제 인프라 배포, 비용 계산, 실시간 협업, 완전한 UML, 여러 설계 뷰. 그룹은 MVP에서 시각적 경계 노드이며 자식 자동 포함·이동은 후속 범위다.
+
+## 검증
+
+```powershell
+pnpm lint
+pnpm test
+pnpm build
+cd src-tauri
+cargo fmt --check
+cargo check
+cargo test
+```

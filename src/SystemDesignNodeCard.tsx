@@ -1,0 +1,3 @@
+import{Handle,Position,type NodeProps}from"@xyflow/react";import{SYSTEM_NODE_TYPES,type SystemDesignNode}from"./domain/systemDesign";
+export type SystemDesignNodeData={node:SystemDesignNode};
+export function SystemDesignNodeCard({data,selected}:NodeProps){const node=(data as SystemDesignNodeData).node;return <article className={`system-node type-${node.type}${selected?" selected":""}`}><Handle aria-label={`${node.name} 입력 연결점`} type="target" position={Position.Left}/><small>{SYSTEM_NODE_TYPES.find(item=>item.id===node.type)?.label}</small><strong>{node.name}</strong><span>{node.technology||"기술 미정"}</span><em>{node.linkedFeatureIds.length}개 기능 연결</em><Handle aria-label={`${node.name} 출력 연결점`} type="source" position={Position.Right}/></article>;}

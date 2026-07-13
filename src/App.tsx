@@ -14,10 +14,11 @@ import { ExportPage } from "./ExportPage";
 import { LoginPage } from "./LoginPage";
 import { createDevelopmentPrdValues } from "./adapters/developmentPrdGenerator";
 import { applyFont, loadFont, type FontId } from "./font";
+import { SystemDesignPage } from "./SystemDesignPage";
 
 interface GithubUser{id:number;login:string;name?:string;avatarUrl:string;isOwner:boolean}
 
-type AppPage = "project" | "prd" | "features" | "user-flow" | "wireframe" | "export" | "settings";
+type AppPage = "project" | "prd" | "features" | "user-flow" | "wireframe" | "system-design" | "export" | "settings";
 
 const STAGES = [
   { id: "project", label: "프로젝트" },
@@ -25,6 +26,7 @@ const STAGES = [
   { id: "features", label: "기능명세" },
   { id: "user-flow", label: "유저플로우" },
   { id: "wireframe", label: "와이어프레임" },
+  { id: "system-design", label: "시스템 설계" },
   { id: "export", label: "내보내기" },
 ] as const;
 
@@ -51,7 +53,7 @@ export default function App() {
   const[completionError,setCompletionError]=useState<string>();
 
   const selectedProject = projects.find(({ project }) => project.id === selectedProjectId);
-  const activeStageIndex = page === "project" ? 0 : page === "prd" ? 1 : page === "features" ? 2 : page === "user-flow" ? 3 : page === "wireframe" ? 4 : page === "export" ? 5 : -1;
+  const activeStageIndex = STAGES.findIndex(stage=>stage.id===page);
 
   useEffect(() => { applyTheme(theme); }, [theme]);
   useEffect(()=>{applyFont(font);},[font]);
@@ -122,9 +124,9 @@ export default function App() {
         {STAGES.map((stage, index) => (
           <button
             className={index === activeStageIndex ? "active" : index < activeStageIndex ? "complete" : ""}
-            disabled={index > 5 || (index > 0 && !selectedProject)}
+            disabled={index > 0 && !selectedProject}
             key={stage.id}
-            onClick={() => index <= 5 && handleNavigate(stage.id as AppPage)}
+            onClick={() => handleNavigate(stage.id as AppPage)}
             type="button"
           >
             <span>{index + 1}</span>{stage.label}
@@ -180,8 +182,9 @@ export default function App() {
         </section>
       )}
       {page === "user-flow" && selectedProject && <section className="full-page user-flow-full-page"><UserFlowPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("features")} type="button">이전: 기능명세</button><button onClick={()=>setPage("wireframe")} type="button">다음: 와이어프레임</button></div></section>}
-      {page === "wireframe" && selectedProject && <section className="full-page wireframe-full-page"><WireframePage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("user-flow")} type="button">이전: 유저플로우</button><button onClick={()=>setPage("export")} type="button">다음: 내보내기</button></div></section>}
-      {page === "export" && selectedProject && <section className="full-page export-full-page"><ExportPage projectId={selectedProject.project.id} projectName={selectedProject.project.name}/>{completionError&&<p className="completion-error" role="alert">{completionError}</p>}<div className="page-actions"><button className="secondary" onClick={()=>setPage("wireframe")} type="button">이전: 와이어프레임</button><button onClick={()=>void handleComplete()} type="button">완료 및 종료</button></div></section>}
+      {page === "wireframe" && selectedProject && <section className="full-page wireframe-full-page"><WireframePage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("user-flow")} type="button">이전: 유저플로우</button><button onClick={()=>setPage("system-design")} type="button">다음: 시스템 설계</button></div></section>}
+      {page === "system-design" && selectedProject && <section className="full-page system-design-full-page"><SystemDesignPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("wireframe")} type="button">이전: 와이어프레임</button><button className="secondary" onClick={()=>setPage("export")} type="button">건너뛰고 내보내기</button><button onClick={()=>setPage("export")} type="button">다음: 내보내기</button></div></section>}
+      {page === "export" && selectedProject && <section className="full-page export-full-page"><ExportPage projectId={selectedProject.project.id} projectName={selectedProject.project.name}/>{completionError&&<p className="completion-error" role="alert">{completionError}</p>}<div className="page-actions"><button className="secondary" onClick={()=>setPage("system-design")} type="button">이전: 시스템 설계</button><button onClick={()=>void handleComplete()} type="button">완료 및 종료</button></div></section>}
     </main>
   );
 }
