@@ -30,6 +30,7 @@ export function SettingsPage({ theme, font, projectId, onThemeChange, onFontChan
   const[environment,setEnvironment]=useState<AppEnvironment>();
 
   useEffect(()=>{if(isTauri())void invoke<AppEnvironment>("get_app_environment").then(setEnvironment).catch(()=>setEnvironment(undefined));},[]);
+  useEffect(()=>{if(!isTauri()||!projectId)return;void invoke<string|null>("get_project_repository_path",{projectId}).then(path=>{if(path)setRepositoryPath(path);}).catch(()=>undefined);},[projectId]);
 
   async function handleCheckTools() {
     setIsChecking(true);
@@ -42,10 +43,9 @@ export function SettingsPage({ theme, font, projectId, onThemeChange, onFontChan
 
   async function handleCheckTool(id:LlmToolId){const programPath=toolPaths[id].trim();localStorage.setItem(TOOL_PATHS_KEY,JSON.stringify(toolPaths));setCheckingTool(id);setToolMessages(current=>({...current,[id]:"연결을 확인하는 중…"}));try{if(!isTauri())throw new Error("도구 연결 확인은 데스크톱 앱에서 사용할 수 있습니다.");const result=await invoke<ToolStatus>("check_tool_connection",{input:{programPath}});setTools(current=>({...current??{claude:{isInstalled:false},codex:{isInstalled:false},antigravity:{isInstalled:false},localLlm:{isInstalled:false},git:{isInstalled:false},githubCli:{isInstalled:false},isGithubAuthenticated:false},[id]:result}));setToolMessages(current=>({...current,[id]:result.version??"연결되었습니다."}));}catch(error){setToolMessages(current=>({...current,[id]:error instanceof Error?error.message:String(error)}));}finally{setCheckingTool(undefined);}}
 
-  function handleSaveConnections() {
-    localStorage.setItem(REPOSITORY_PATH_KEY, repositoryPath.trim());
-    localStorage.setItem(GITHUB_REMOTE_KEY, githubRemote.trim());
-    setMessage("연결 설정을 이 컴퓨터에 저장했습니다.");
+  async function handleSaveConnections() {
+    if(!projectId){setMessage("저장소를 연결할 프로젝트를 먼저 선택해 주세요.");return;}
+    try{const saved=isTauri()?await invoke<string>("save_project_repository_path",{input:{projectId,repositoryPath:repositoryPath.trim()}}):repositoryPath.trim();setRepositoryPath(saved);localStorage.setItem(REPOSITORY_PATH_KEY,saved);localStorage.setItem(GITHUB_REMOTE_KEY,githubRemote.trim());setMessage("이 프로젝트의 Git 저장소 연결을 확인하고 저장했습니다.");}catch(error){setMessage(error instanceof Error?error.message:String(error));}
   }
 
   async function handleSync() {

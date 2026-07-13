@@ -60,6 +60,13 @@ pub struct SavePrdRevisionInput {
     created_at: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectRepositoryPathInput {
+    project_id: String,
+    repository_path: String,
+}
+
 fn database_path(app: &AppHandle) -> Result<PathBuf, String> {
     let app_data_dir = app
         .path()
@@ -80,6 +87,46 @@ async fn open_database(app: &AppHandle) -> Result<SqliteConnection, String> {
     SqliteConnection::connect_with(&options)
         .await
         .map_err(|error| format!("로컬 데이터베이스를 열지 못했습니다: {error}"))
+}
+
+#[tauri::command]
+pub async fn get_project_repository_path(
+    app: AppHandle,
+    project_id: String,
+) -> Result<Option<String>, String> {
+    let mut connection = open_database(&app).await?;
+    sqlx::query_scalar("SELECT git_repository_path FROM projects WHERE id = ?")
+        .bind(project_id)
+        .fetch_optional(&mut connection)
+        .await
+        .map_err(|error| format!("프로젝트 저장소 연결을 읽지 못했습니다: {error}"))
+        .map(|value| value.flatten())
+}
+
+#[tauri::command]
+pub async fn save_project_repository_path(
+    app: AppHandle,
+    input: ProjectRepositoryPathInput,
+) -> Result<String, String> {
+    let root = std::fs::canonicalize(input.repository_path.trim())
+        .map_err(|_| "선택한 로컬 저장소 경로를 찾을 수 없습니다.".to_owned())?;
+    if !root.join(".git").exists() {
+        return Err("선택한 경로는 Git 저장소 루트가 아닙니다.".to_owned());
+    }
+    let path = root.to_string_lossy().into_owned();
+    let mut connection = open_database(&app).await?;
+    let result = sqlx::query(
+        "UPDATE projects SET git_repository_path = ?, updated_at = datetime('now') WHERE id = ?",
+    )
+    .bind(&path)
+    .bind(&input.project_id)
+    .execute(&mut connection)
+    .await
+    .map_err(|error| format!("프로젝트 저장소 연결을 저장하지 못했습니다: {error}"))?;
+    if result.rows_affected() != 1 {
+        return Err("연결할 프로젝트를 찾지 못했습니다.".to_owned());
+    }
+    Ok(path)
 }
 
 #[tauri::command]

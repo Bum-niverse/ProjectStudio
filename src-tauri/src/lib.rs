@@ -106,6 +106,8 @@ pub fn run() {
             architecture_drift::inspect_architecture_drift,
             project_repository::save_project_with_initial_prd,
             project_repository::list_projects,
+            project_repository::get_project_repository_path,
+            project_repository::save_project_repository_path,
             project_repository::save_prd_revision,
             project_export::export_project_package,
             feature_repository::initialize_feature_spec,
