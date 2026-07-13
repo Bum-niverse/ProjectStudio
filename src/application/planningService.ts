@@ -3,7 +3,7 @@ import { createFeatureRepository } from "../adapters/featureRepository";
 import { createSystemDesignRepository } from "../adapters/systemDesignRepository";
 import { createUserFlowRepository } from "../adapters/userFlowRepository";
 import type { FeatureSpec } from "../domain/feature";
-import type { ProjectType } from "../domain/project";
+import type { ProjectSubtype, ProjectType } from "../domain/project";
 import { inspectPlanningQuality, type PlanningQualityReport } from "../domain/planningQuality";
 import type { SystemDesignSnapshot } from "../domain/systemDesign";
 import { validateSystemDesign } from "../domain/systemDesign";
@@ -29,6 +29,7 @@ export async function generateAndSavePlanningBundle(input: {
   projectId: string;
   projectName: string;
   projectType: ProjectType;
+  projectSubtype?: ProjectSubtype;
   sourceDocumentId: string;
   prdMarkdown: string;
   replaceExisting?: boolean;

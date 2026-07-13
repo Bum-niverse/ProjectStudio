@@ -32,12 +32,12 @@ export function parsePrdMarkdown(markdown:string):PrdBlockValues{
   return values;
 }
 
-export function serializePrdMarkdown(projectTitle:string,values:PrdBlockValues):string{
-  const sections=PRD_SECTIONS.map(section=>`## ${section.title}\n\n${section.fields.map(field=>`### ${field.title}\n\n${values[field.id]?.trim()||"작성 필요"}`).join("\n\n")}`).join("\n\n");
+export function serializePrdMarkdown(projectTitle:string,values:PrdBlockValues,definitions:PrdSectionDefinition[]=PRD_SECTIONS):string{
+  const sections=definitions.map(section=>`## ${section.title}\n\n${section.fields.map(field=>`### ${field.title}\n\n${values[field.id]?.trim()||"작성 필요"}`).join("\n\n")}`).join("\n\n");
   return `# ${projectTitle}\n\n${sections}\n`;
 }
 
-export function prdCompletion(values:PrdBlockValues):number{
-  const fields=PRD_SECTIONS.flatMap(section=>section.fields);const completed=fields.filter(field=>values[field.id]?.trim()&&values[field.id]?.trim()!=="작성 필요").length;
+export function prdCompletion(values:PrdBlockValues,definitions:PrdSectionDefinition[]=PRD_SECTIONS):number{
+  const fields=definitions.flatMap(section=>section.fields);const completed=fields.filter(field=>values[field.id]?.trim()&&values[field.id]?.trim()!=="작성 필요").length;
   return Math.round(completed/fields.length*100);
 }

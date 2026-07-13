@@ -1,4 +1,27 @@
 export type ProjectType = "auto" | "web" | "mobile" | "desktop" | "backend_cli" | "machine_learning" | "data_analysis" | "general";
+export type DataAnalysisSubtype = "eda" | "statistical" | "time_series_analysis" | "dashboard_report" | "data_pipeline" | "research_reproduction" | "other_data";
+export type MachineLearningSubtype = "regression" | "classification" | "time_series_forecasting" | "recommendation" | "anomaly_detection" | "clustering" | "nlp" | "computer_vision" | "ranking" | "other_ml";
+export type ProjectSubtype = DataAnalysisSubtype | MachineLearningSubtype;
+
+export const PROJECT_SUBTYPES: Record<"data_analysis" | "machine_learning", Array<{ id: ProjectSubtype; label: string }>> = {
+  data_analysis: [
+    { id: "eda", label: "탐색적 데이터 분석" }, { id: "statistical", label: "통계 분석" },
+    { id: "time_series_analysis", label: "시계열 분석" }, { id: "dashboard_report", label: "대시보드·리포트" },
+    { id: "data_pipeline", label: "데이터 파이프라인" }, { id: "research_reproduction", label: "연구·논문 재현" },
+    { id: "other_data", label: "기타" },
+  ],
+  machine_learning: [
+    { id: "regression", label: "회귀" }, { id: "classification", label: "분류" },
+    { id: "time_series_forecasting", label: "시계열 예측" }, { id: "recommendation", label: "추천 시스템" },
+    { id: "anomaly_detection", label: "이상 탐지" }, { id: "clustering", label: "클러스터링" },
+    { id: "nlp", label: "자연어 처리" }, { id: "computer_vision", label: "컴퓨터 비전" },
+    { id: "ranking", label: "랭킹" }, { id: "other_ml", label: "기타" },
+  ],
+};
+
+export function isDataProject(projectType: ProjectType): projectType is "data_analysis" | "machine_learning" {
+  return projectType === "data_analysis" || projectType === "machine_learning";
+}
 
 export const PROJECT_TYPES: Array<{ id: Exclude<ProjectType, "auto">; label: string; description: string }> = [
   { id: "web", label: "웹 서비스", description: "브라우저 화면, 사용자 흐름, API와 권한을 설계합니다." },
@@ -27,6 +50,7 @@ export interface Project {
   name: string;
   idea: string;
   projectType: ProjectType;
+  projectSubtype?: ProjectSubtype;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,12 +73,14 @@ export interface CreateProjectInput {
   name: string;
   idea: string;
   projectType: ProjectType;
+  projectSubtype?: ProjectSubtype;
 }
 
 export interface ProjectValidationErrors {
   name?: string;
   idea?: string;
   projectType?: string;
+  projectSubtype?: string;
 }
 
 export class ProjectValidationError extends Error {

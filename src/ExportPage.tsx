@@ -1,7 +1,8 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useState } from "react";
+import { isDataProject, type ProjectType } from "./domain/project";
 
-interface Props { projectId: string; projectName: string }
+interface Props { projectId: string; projectName: string; projectType: ProjectType }
 interface ExportResult { outputPath: string; files: string[] }
 
 const FORMATS = [
@@ -17,9 +18,15 @@ const SECTIONS = [
 ] as const;
 const TARGETS = ["Codex", "Claude", "Antigravity", "Generic LLM"];
 
-export function ExportPage({ projectId, projectName }: Props) {
+export function ExportPage({ projectId, projectName, projectType }: Props) {
+  const availableSections = isDataProject(projectType) ? [
+    { id: "project", name: "프로젝트 정의" }, { id: "prd", name: "문제·목표 정의" },
+    { id: "data-design", name: projectType === "machine_learning" ? "데이터·타깃 설계" : "데이터 설계" },
+    { id: "user-flow", name: projectType === "machine_learning" ? "실험 설계" : "분석 설계" },
+    { id: "system-design", name: projectType === "machine_learning" ? "ML 파이프라인 설계" : "데이터 시스템 설계" },
+  ] : [...SECTIONS];
   const [formats, setFormats] = useState<string[]>(FORMATS.map(item => item.id));
-  const [sections, setSections] = useState<string[]>(SECTIONS.map(item => item.id));
+  const [sections, setSections] = useState<string[]>(availableSections.map(item => item.id));
   const [targets, setTargets] = useState<string[]>(["Codex", "Claude", "Generic LLM"]);
   const [outputDirectory, setOutputDirectory] = useState(() => localStorage.getItem("projectstudio:repository-path") ?? "");
   const [isExporting, setIsExporting] = useState(false);
@@ -35,5 +42,5 @@ export function ExportPage({ projectId, projectName }: Props) {
     } catch (error) { setMessage(error instanceof Error ? error.message : String(error)); }
     finally { setIsExporting(false); }
   }
-  return <section className="export-page"><header><p className="eyebrow">06 · EXPORT & HANDOFF</p><h2>{projectName} 내보내기</h2><p>정리된 기획 데이터를 사람이 읽는 보고서와 LLM이 바로 사용할 개발 문맥으로 만듭니다.</p></header><div className="export-grid"><section><h3>파일 형식</h3><div className="export-option-grid">{FORMATS.map(item => <label className={formats.includes(item.id) ? "selected" : ""} key={item.id}><input checked={formats.includes(item.id)} onChange={() => toggle(item.id, formats, setFormats)} type="checkbox"/><span><strong>{item.name}</strong><small>{item.description}</small></span></label>)}</div></section><section><h3>포함할 문서</h3><div className="export-check-list">{SECTIONS.map(item => <label key={item.id}><input checked={sections.includes(item.id)} onChange={() => toggle(item.id, sections, setSections)} type="checkbox"/>{item.name}</label>)}</div></section><section><h3>LLM 실행 프롬프트</h3><p>선택한 도구마다 동일한 프로젝트 문맥을 참조하는 시작 프롬프트를 별도 Markdown으로 만듭니다.</p><div className="export-check-list">{TARGETS.map(item => <label key={item}><input checked={targets.includes(item)} onChange={() => toggle(item, targets, setTargets)} type="checkbox"/>{item}</label>)}</div></section><section><h3>저장 위치</h3><p>지정 폴더 아래 `ProjectStudio-Exports/프로젝트-시간` 폴더를 생성합니다.</p><label className="export-path-label">로컬 폴더 경로<input value={outputDirectory} onChange={event => setOutputDirectory(event.target.value)} placeholder="C:\\Projects\\Globeat"/></label></section></div><footer><div><strong>{message}</strong>{result && <><p>{result.outputPath}</p><ul>{result.files.map(file => <li key={file}>{file}</li>)}</ul></>}</div><button disabled={isExporting || !formats.length || !sections.length || !outputDirectory.trim()} onClick={() => void exportPackage()} type="button">{isExporting ? "내보내는 중…" : "선택한 데이터 내보내기"}</button></footer></section>;
+  return <section className="export-page"><header><p className="eyebrow">06 · EXPORT & HANDOFF</p><h2>{projectName} {isDataProject(projectType)?"실행 계획·내보내기":"내보내기"}</h2><p>정리된 기획 데이터를 사람이 읽는 보고서와 LLM이 바로 사용할 개발 문맥으로 만듭니다.</p></header><div className="export-grid"><section><h3>파일 형식</h3><div className="export-option-grid">{FORMATS.map(item => <label className={formats.includes(item.id) ? "selected" : ""} key={item.id}><input checked={formats.includes(item.id)} onChange={() => toggle(item.id, formats, setFormats)} type="checkbox"/><span><strong>{item.name}</strong><small>{item.description}</small></span></label>)}</div></section><section><h3>포함할 문서</h3><div className="export-check-list">{availableSections.map(item => <label key={item.id}><input checked={sections.includes(item.id)} onChange={() => toggle(item.id, sections, setSections)} type="checkbox"/>{item.name}</label>)}</div></section><section><h3>LLM 실행 프롬프트</h3><p>선택한 도구마다 동일한 프로젝트 문맥을 참조하는 시작 프롬프트를 별도 Markdown으로 만듭니다.</p><div className="export-check-list">{TARGETS.map(item => <label key={item}><input checked={targets.includes(item)} onChange={() => toggle(item, targets, setTargets)} type="checkbox"/>{item}</label>)}</div></section><section><h3>저장 위치</h3><p>지정 폴더 아래 `ProjectStudio-Exports/프로젝트-시간` 폴더를 생성합니다.</p><label className="export-path-label">로컬 폴더 경로<input value={outputDirectory} onChange={event => setOutputDirectory(event.target.value)} placeholder="C:\\Projects\\Globeat"/></label></section></div><footer><div><strong>{message}</strong>{result && <><p>{result.outputPath}</p><ul>{result.files.map(file => <li key={file}>{file}</li>)}</ul></>}</div><button disabled={isExporting || !formats.length || !sections.length || !outputDirectory.trim()} onClick={() => void exportPackage()} type="button">{isExporting ? "내보내는 중…" : "선택한 데이터 내보내기"}</button></footer></section>;
 }

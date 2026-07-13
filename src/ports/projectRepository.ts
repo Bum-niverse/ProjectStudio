@@ -1,10 +1,11 @@
-import type { PrdRevision, ProjectType, ProjectWithPrd } from "../domain/project";
+import type { PrdRevision, ProjectSubtype, ProjectType, ProjectWithPrd } from "../domain/project";
 
 export interface SaveProjectWithPrdInput {
   projectId: string;
   projectName: string;
   idea: string;
   projectType: ProjectType;
+  projectSubtype?: ProjectSubtype;
   documentId: string;
   revisionId: string;
   prdTitle: string;

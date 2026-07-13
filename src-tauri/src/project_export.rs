@@ -32,6 +32,7 @@ struct ProjectData {
     features: Vec<FeatureRow>,
     flows: Vec<FlowRow>,
     system_design: Option<SystemSnapshot>,
+    data_design: Option<serde_json::Value>,
 }
 struct FeatureRow {
     id: String,
@@ -137,6 +138,9 @@ async fn load_data(app: &AppHandle, project_id: &str) -> Result<ProjectData, Str
     let system_design = sqlx::query_scalar::<_, String>("SELECT r.snapshot_json FROM system_designs d JOIN system_design_revisions r ON r.id=d.current_revision_id WHERE d.project_id=?")
         .bind(project_id).fetch_optional(&mut db).await.map_err(|e|e.to_string())?
         .map(|value| serde_json::from_str(&value).map_err(|e| format!("시스템 설계 데이터가 손상되었습니다: {e}"))).transpose()?;
+    let data_design = sqlx::query_scalar::<_, String>("SELECT r.content_json FROM data_designs d JOIN data_design_revisions r ON r.id=d.current_revision_id WHERE d.project_id=?")
+        .bind(project_id).fetch_optional(&mut db).await.map_err(|e|e.to_string())?
+        .map(|value| serde_json::from_str(&value).map_err(|e| format!("데이터 설계 데이터가 손상되었습니다: {e}"))).transpose()?;
     Ok(ProjectData {
         name,
         idea,
@@ -144,6 +148,7 @@ async fn load_data(app: &AppHandle, project_id: &str) -> Result<ProjectData, Str
         features,
         flows,
         system_design,
+        data_design,
     })
 }
 fn markdown(data: &ProjectData, sections: &[String]) -> String {
@@ -158,6 +163,17 @@ fn markdown(data: &ProjectData, sections: &[String]) -> String {
         out.push_str("\n## 기능명세\n");
         for f in &data.features {
             out.push_str(&format!("\n### {} [{}]\n\n- ID: `{}`\n- 부모: `{}`\n- 상태/중요도: {} / {}\n- 역할: {}\n- 설명: {}\n- 수용 기준: {}\n",f.title,f.status,f.id,f.parent_id.as_deref().unwrap_or("root"),f.status,f.priority,f.role,f.description,f.criteria));
+        }
+    }
+    if sections.iter().any(|s| s == "data-design") {
+        out.push_str("\n## 데이터 설계\n\n");
+        if let Some(design) = &data.data_design {
+            out.push_str(&format!(
+                "```json\n{}\n```\n",
+                serde_json::to_string_pretty(design).unwrap_or_default()
+            ));
+        } else {
+            out.push_str("아직 저장된 데이터 설계가 없습니다.\n");
         }
     }
     if sections.iter().any(|s| s == "user-flow") {
@@ -452,6 +468,18 @@ pub async fn export_project_package(
                     files.push(name.to_owned());
                 }
             }
+        }
+    }
+    if input.sections.iter().any(|s| s == "data-design")
+        && input.formats.iter().any(|f| f == "json")
+    {
+        if let Some(design) = &data.data_design {
+            fs::write(
+                output.join("data-design.json"),
+                serde_json::to_string_pretty(design).map_err(|e| e.to_string())?,
+            )
+            .map_err(|e| e.to_string())?;
+            files.push("data-design.json".to_owned());
         }
     }
     if input.formats.iter().any(|f| f == "csv") && input.sections.iter().any(|s| s == "features") {

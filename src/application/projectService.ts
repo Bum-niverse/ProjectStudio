@@ -32,6 +32,7 @@ export class ProjectService {
     if (!name) fields.name = "프로젝트 이름을 입력해 주세요.";
     if (!idea) fields.idea = "아이디어를 입력해 주세요.";
     if (input.projectType === "auto") fields.projectType = "새 프로젝트의 유형을 선택해 주세요.";
+    if ((input.projectType === "data_analysis" || input.projectType === "machine_learning") && !input.projectSubtype) fields.projectSubtype = "데이터 프로젝트의 세부 유형을 선택해 주세요.";
     if (Object.keys(fields).length > 0) throw new ProjectValidationError(fields);
 
     const createdAt = this.now();
@@ -39,6 +40,7 @@ export class ProjectService {
       projectName: name,
       idea,
       projectType: input.projectType,
+      projectSubtype: input.projectSubtype,
     });
 
     return this.dependencies.repository.saveProjectWithInitialPrd({
@@ -46,6 +48,7 @@ export class ProjectService {
       projectName: name,
       idea,
       projectType: input.projectType,
+      projectSubtype: input.projectSubtype,
       documentId: this.createId(),
       revisionId: this.createId(),
       prdTitle: `${name} PRD`,

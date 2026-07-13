@@ -3,6 +3,7 @@ mod architecture_drift;
 mod codex_planning;
 mod codex_sync;
 mod codex_system_design;
+mod data_design_repository;
 mod developer_tools;
 mod feature_change_proposals;
 mod feature_repository;
@@ -78,6 +79,18 @@ pub fn run() {
             sql: include_str!("../migrations/0009_project_types.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 10,
+            description: "project_subtypes",
+            sql: include_str!("../migrations/0010_project_subtypes.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 11,
+            description: "data_design_revisions",
+            sql: include_str!("../migrations/0011_data_design_revisions.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -101,6 +114,8 @@ pub fn run() {
             feature_change_proposals::list_feature_change_proposals,
             feature_change_proposals::decide_feature_change_proposal,
             developer_tools::check_developer_tools,
+            data_design_repository::initialize_data_design,
+            data_design_repository::save_data_design_revision,
             developer_tools::check_tool_connection,
             github_auth::get_github_session,
             github_auth::start_github_login,

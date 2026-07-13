@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { createProjectService } from "./application/createProjectService";
-import { isInterfaceProject, PROJECT_TYPES, ProjectValidationError, projectTypeLabel, type ProjectType, type ProjectValidationErrors, type ProjectWithPrd } from "./domain/project";
+import { isDataProject, PROJECT_SUBTYPES, PROJECT_TYPES, ProjectValidationError, projectTypeLabel, type ProjectSubtype, type ProjectType, type ProjectValidationErrors, type ProjectWithPrd } from "./domain/project";
+import { workflowStages } from "./domain/projectWorkflow";
 import { FeatureMap } from "./FeatureMap";
 import { PrdEditor } from "./PrdEditor";
 import "./styles.css";
@@ -15,25 +16,12 @@ import { createDevelopmentPrdValues } from "./adapters/developmentPrdGenerator";
 import { applyFont, loadFont, type FontId } from "./font";
 import { SystemDesignPage } from "./SystemDesignPage";
 import { generateAndSavePlanningBundle, type PlanningGenerationResult } from "./application/planningService";
+import { DataDesignPage } from "./DataDesignPage";
+import { dataProblemSections } from "./domain/dataProblemSections";
 
 interface GithubUser{id:number;login:string;name?:string;avatarUrl:string;isOwner:boolean}
 
 type AppPage = "project" | "prd" | "features" | "user-flow" | "system-design" | "export" | "settings";
-
-const BASE_STAGES = [
-  { id: "project", label: "프로젝트" },
-  { id: "prd", label: "PRD" },
-  { id: "features", label: "기능명세" },
-  { id: "user-flow", label: "유저플로우" },
-  { id: "system-design", label: "시스템 설계" },
-  { id: "export", label: "내보내기" },
-] as const;
-
-function stagesFor(projectType: ProjectType | undefined) {
-  return BASE_STAGES.map(stage =>
-    stage.id === "user-flow" && projectType && !isInterfaceProject(projectType) ? { ...stage, label: "실행 파이프라인" } : stage,
-  );
-}
 
 export default function App() {
   const isVisualTest = !isTauri() && new URLSearchParams(window.location.search).get("visual-test") === "1";
@@ -47,6 +35,7 @@ export default function App() {
   const [name, setName] = useState("");
   const [idea, setIdea] = useState("");
   const [projectType, setProjectType] = useState<ProjectType>("auto");
+  const [projectSubtype, setProjectSubtype] = useState<ProjectSubtype>();
   const [errors, setErrors] = useState<ProjectValidationErrors>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,7 +49,8 @@ export default function App() {
   const [planningState,setPlanningState]=useState<{projectId:string;status:"running"|"success"|"error";result?:PlanningGenerationResult;message:string}>();
 
   const selectedProject = projects.find(({ project }) => project.id === selectedProjectId);
-  const stages = stagesFor(selectedProject?.project.projectType);
+  const stages = workflowStages(selectedProject?.project.projectType);
+  const stageLabel = (id: (typeof stages)[number]["id"]) => stages.find(stage => stage.id === id)?.label ?? id;
   const activeStageIndex = stages.findIndex(stage=>stage.id===page);
 
   useEffect(() => { applyTheme(theme); }, [theme]);
@@ -85,11 +75,12 @@ export default function App() {
     setSaveError(undefined);
     setIsSaving(true);
     try {
-      const created = await service.createProject({ name, idea, projectType });
+      const created = await service.createProject({ name, idea, projectType, projectSubtype });
       setProjects((current) => [created, ...current]);
       setSelectedProjectId(created.project.id);
       setName("");
       setIdea("");
+      setProjectSubtype(undefined);
       setProjectType("auto");
       setPage("prd");
       generateDetailedPlan(created);
@@ -103,7 +94,7 @@ export default function App() {
 
   function generateDetailedPlan(project: ProjectWithPrd, replaceExisting=false) {
     setPlanningState({projectId:project.project.id,status:"running",message:"PRD를 Codex CLI에 전달해 기능명세·유저플로우·시스템 설계를 생성하고 있습니다."});
-    void generateAndSavePlanningBundle({projectId:project.project.id,projectName:project.project.name,projectType:project.project.projectType,sourceDocumentId:project.prd.documentId,prdMarkdown:project.prd.contentMarkdown,replaceExisting})
+    void generateAndSavePlanningBundle({projectId:project.project.id,projectName:project.project.name,projectType:project.project.projectType,projectSubtype:project.project.projectSubtype,sourceDocumentId:project.prd.documentId,prdMarkdown:project.prd.contentMarkdown,replaceExisting})
       .then(result=>setPlanningState({projectId:project.project.id,status:"success",result,message:"Codex 상세 기획을 로컬 작업대에 저장했습니다."}))
       .catch(error=>setPlanningState({projectId:project.project.id,status:"error",message:`${error instanceof Error?error.message:String(error)} PRD는 저장됐습니다. 하위 산출물 상태를 확인한 뒤 다시 실행할 수 있습니다.`}));
   }
@@ -171,8 +162,10 @@ export default function App() {
               <label htmlFor="project-name">프로젝트 이름</label>
               <input id="project-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="예: Globeat" />
               {errors.name && <p className="field-error">{errors.name}</p>}
-              <fieldset className="project-type-fieldset"><legend>프로젝트 유형</legend><div className="project-type-options">{PROJECT_TYPES.map(type=><label className={projectType===type.id?"selected":""} key={type.id}><input checked={projectType===type.id} name="project-type" onChange={()=>setProjectType(type.id)} type="radio" value={type.id}/><span><strong>{type.label}</strong><small>{type.description}</small></span></label>)}</div></fieldset>
+              <fieldset className="project-type-fieldset"><legend>프로젝트 유형</legend><div className="project-type-options">{PROJECT_TYPES.map(type=><label className={projectType===type.id?"selected":""} key={type.id}><input checked={projectType===type.id} name="project-type" onChange={()=>{setProjectType(type.id);setProjectSubtype(undefined);}} type="radio" value={type.id}/><span><strong>{type.label}</strong><small>{type.description}</small></span></label>)}</div></fieldset>
               {errors.projectType && <p className="field-error">{errors.projectType}</p>}
+              {isDataProject(projectType)&&<label>세부 유형<select aria-label="프로젝트 세부 유형" onChange={event=>setProjectSubtype(event.target.value as ProjectSubtype)} value={projectSubtype??""}><option value="">세부 유형을 선택해 주세요</option>{PROJECT_SUBTYPES[projectType].map(subtype=><option key={subtype.id} value={subtype.id}>{subtype.label}</option>)}</select></label>}
+              {errors.projectSubtype && <p className="field-error">{errors.projectSubtype}</p>}
               <label htmlFor="project-idea">아이디어</label>
               <textarea id="project-idea" value={idea} onChange={(event) => setIdea(event.target.value)} placeholder="누구의 어떤 문제를 어떻게 해결할지 적어 주세요." rows={9} />
               {errors.idea && <p className="field-error">{errors.idea}</p>}
@@ -195,21 +188,21 @@ export default function App() {
             <div><p className="eyebrow">02 · PRODUCT REQUIREMENTS</p><h2>{selectedProject.project.name} PRD</h2><p>{selectedProject.project.idea}</p></div>
             <span className="revision-badge">REV {selectedProject.prd.revisionNumber}</span>
           </div>
-          <PrdEditor key={selectedProject.prd.id} revision={selectedProject.prd} fallbackValues={createDevelopmentPrdValues(selectedProject.project.name,selectedProject.project.idea,selectedProject.project.projectType)} onSave={handleSavePrd} />
+          <PrdEditor key={selectedProject.prd.id} revision={selectedProject.prd} fallbackValues={createDevelopmentPrdValues(selectedProject.project.name,selectedProject.project.idea,selectedProject.project.projectType)} sections={isDataProject(selectedProject.project.projectType)?dataProblemSections(selectedProject.project.projectType):undefined} documentLabel={isDataProject(selectedProject.project.projectType)?"문제·목표 정의":"PRD"} onSave={handleSavePrd} />
           <section className={`planning-generation-status ${planningState?.projectId===selectedProject.project.id?planningState.status:"idle"}`} aria-live="polite"><div><strong>{planningState?.projectId!==selectedProject.project.id?"Codex 상세 산출물":planningState.status==="running"?"Codex 상세 기획 생성 중":planningState.status==="success"?"상세 산출물 생성 완료":"상세 산출물 생성 실패"}</strong><p>{planningState?.projectId===selectedProject.project.id?planningState.message:"현재 PRD를 분석해 기능명세·유저플로우·시스템 설계를 프로젝트별로 상세 생성합니다."}</p>{planningState?.projectId===selectedProject.project.id&&planningState.result&&<><small>기능 {planningState.result.featureCount}개 · 수용 기준 {planningState.result.criterionCount}개 · 유저플로우 {planningState.result.flowNodeCount}노드/{planningState.result.flowEdgeCount}연결 · 시스템 설계 {planningState.result.designNodeCount}노드/{planningState.result.designEdgeCount}연결</small><div className={`planning-quality-summary ${planningState.result.quality.gate}`}><b>품질 검사 {planningState.result.quality.score}점 · {planningState.result.quality.projectTypeLabel}</b><span>{planningState.result.quality.gate==="pass"?"통과":planningState.result.quality.gate==="review"?"검토 필요":"보완 필요"} · {planningState.result.quality.passedChecks}/{planningState.result.quality.checks}개 기준 충족</span>{planningState.result.quality.findings.length>0&&<ul>{planningState.result.quality.findings.slice(0,3).map(finding=><li key={finding.id}><strong>{finding.title}</strong> {finding.recommendation}</li>)}</ul>}</div></>}</div><div className="planning-generation-actions"><span>{planningState?.projectId===selectedProject.project.id&&planningState.status==="running"?"현재 PRD 내용이 로컬 Codex CLI로 전달됩니다.":"기존 하위 산출물 교체 전 확인을 요청합니다."}</span><button disabled={planningState?.projectId===selectedProject.project.id&&planningState.status==="running"} onClick={handleRegeneratePlanning} type="button">{planningState?.projectId===selectedProject.project.id&&planningState.status==="running"?"생성 중…":"Codex로 상세 산출물 생성"}</button></div></section>
-          <div className="page-actions"><button className="secondary" onClick={() => setPage("project")} type="button">이전: 프로젝트</button><button onClick={() => setPage("features")} type="button">다음: 기능명세</button></div>
+          <div className="page-actions"><button className="secondary" onClick={() => setPage("project")} type="button">이전: {stageLabel("project")}</button><button onClick={() => setPage("features")} type="button">다음: {stageLabel("features")}</button></div>
         </section>
       )}
 
       {page === "features" && selectedProject && (
         <section className="full-page feature-page">
-          <FeatureMap projectId={selectedProject.project.id} projectName={selectedProject.project.name} projectIdea={selectedProject.project.idea} sourceDocumentId={selectedProject.prd.documentId} />
-          <div className="page-actions"><button className="secondary" onClick={() => setPage("prd")} type="button">이전: PRD</button><button onClick={() => setPage("user-flow")} type="button">다음: 유저플로우</button></div>
+          {isDataProject(selectedProject.project.projectType)?<DataDesignPage projectId={selectedProject.project.id} projectType={selectedProject.project.projectType}/>:<FeatureMap projectId={selectedProject.project.id} projectName={selectedProject.project.name} projectIdea={selectedProject.project.idea} sourceDocumentId={selectedProject.prd.documentId} />}
+          <div className="page-actions"><button className="secondary" onClick={() => setPage("prd")} type="button">이전: {stageLabel("prd")}</button><button onClick={() => setPage("user-flow")} type="button">다음: {stageLabel("user-flow")}</button></div>
         </section>
       )}
-      {page === "user-flow" && selectedProject && <section className="full-page user-flow-full-page"><UserFlowPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} projectIdea={selectedProject.project.idea} projectType={selectedProject.project.projectType} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("features")} type="button">이전: 기능명세</button><button onClick={()=>setPage("system-design")} type="button">다음: 시스템 설계</button></div></section>}
-      {page === "system-design" && selectedProject && <section className="full-page system-design-full-page"><SystemDesignPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("user-flow")} type="button">이전: {isInterfaceProject(selectedProject.project.projectType)?"유저플로우":"실행 파이프라인"}</button><button className="secondary" onClick={()=>setPage("export")} type="button">건너뛰고 내보내기</button><button onClick={()=>setPage("export")} type="button">다음: 내보내기</button></div></section>}
-      {page === "export" && selectedProject && <section className="full-page export-full-page"><ExportPage projectId={selectedProject.project.id} projectName={selectedProject.project.name}/>{completionError&&<p className="completion-error" role="alert">{completionError}</p>}<div className="page-actions"><button className="secondary" onClick={()=>setPage("system-design")} type="button">이전: 시스템 설계</button><button onClick={()=>void handleComplete()} type="button">완료 및 종료</button></div></section>}
+      {page === "user-flow" && selectedProject && <section className="full-page user-flow-full-page"><UserFlowPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} projectIdea={selectedProject.project.idea} projectType={selectedProject.project.projectType} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("features")} type="button">이전: {stageLabel("features")}</button><button onClick={()=>setPage("system-design")} type="button">다음: {stageLabel("system-design")}</button></div></section>}
+      {page === "system-design" && selectedProject && <section className="full-page system-design-full-page"><SystemDesignPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} sourceDocumentId={selectedProject.prd.documentId}/><div className="page-actions"><button className="secondary" onClick={()=>setPage("user-flow")} type="button">이전: {stageLabel("user-flow")}</button><button className="secondary" onClick={()=>setPage("export")} type="button">건너뛰고 {stageLabel("export")}</button><button onClick={()=>setPage("export")} type="button">다음: {stageLabel("export")}</button></div></section>}
+      {page === "export" && selectedProject && <section className="full-page export-full-page"><ExportPage projectId={selectedProject.project.id} projectName={selectedProject.project.name} projectType={selectedProject.project.projectType}/>{completionError&&<p className="completion-error" role="alert">{completionError}</p>}<div className="page-actions"><button className="secondary" onClick={()=>setPage("system-design")} type="button">이전: 시스템 설계</button><button onClick={()=>void handleComplete()} type="button">완료 및 종료</button></div></section>}
     </main>
   );
 }
