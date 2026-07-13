@@ -20,6 +20,14 @@ export interface SystemDesignProposal{id:string;projectId:string;designId:string
 export interface SystemDesignWorkspace{designId:string;projectId:string;revision:SystemDesignRevision;proposals:SystemDesignProposal[];}
 export interface SystemDesignWarning{id:string;kind:"disconnected"|"unlinked_feature"|"missing_datastore"|"external_error"|"missing_auth"|"cycle"|"missing_node"|"duplicate_id"|"direct_database"|"missing_protocol";message:string;targetId?:string;}
 
+export function moveNodesContainedByGroup(nodes:SystemDesignNode[],groupId:string,nextPosition:{x:number;y:number}):SystemDesignNode[]{
+  const group=nodes.find(node=>node.id===groupId&&node.type==="group");
+  if(!group)return nodes;
+  const delta={x:nextPosition.x-group.position.x,y:nextPosition.y-group.position.y};
+  const isContained=(node:SystemDesignNode)=>node.id!==group.id&&node.type!=="group"&&node.position.x>=group.position.x&&node.position.y>=group.position.y&&node.position.x+node.size.width<=group.position.x+group.size.width&&node.position.y+node.size.height<=group.position.y+group.size.height;
+  return nodes.map(node=>node.id===group.id?{...node,position:nextPosition}:isContained(node)?{...node,position:{x:node.position.x+delta.x,y:node.position.y+delta.y}}:node);
+}
+
 export const SYSTEM_NODE_TYPES:Array<{id:SystemNodeType;label:string}>=[
   {id:"client",label:"클라이언트"},{id:"service",label:"서비스"},{id:"database",label:"데이터베이스"},{id:"cache",label:"캐시"},
   {id:"queue",label:"메시지 큐"},{id:"external",label:"외부 시스템"},{id:"component",label:"일반 컴포넌트"},{id:"group",label:"그룹"},

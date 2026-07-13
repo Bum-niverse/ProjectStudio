@@ -10,6 +10,7 @@ mod project_export;
 mod project_repository;
 mod system_design_repository;
 mod user_flow_repository;
+mod wireframe_repository;
 
 use tauri_plugin_sql::{Migration, MigrationKind};
 
@@ -59,6 +60,12 @@ pub fn run() {
             sql: include_str!("../migrations/0006_system_designs.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 7,
+            description: "wireframe_pages",
+            sql: include_str!("../migrations/0007_wireframe_pages.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -95,7 +102,9 @@ pub fn run() {
             user_flow_repository::update_user_flow_node,
             user_flow_repository::connect_user_flow_nodes,
             user_flow_repository::create_user_flow_node,
-            user_flow_repository::delete_user_flow_node
+            user_flow_repository::delete_user_flow_node,
+            wireframe_repository::list_wireframe_pages,
+            wireframe_repository::save_wireframe_pages
         ])
         .plugin(
             tauri_plugin_sql::Builder::default()

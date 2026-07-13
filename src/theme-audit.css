@@ -59,3 +59,4 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 @media(max-width:620px){.prd-block-nav nav{grid-template-columns:1fr 1fr}.prd-block{padding:18px}}
 .page-progress{grid-template-columns:repeat(7,minmax(0,1fr))}@media(max-width:760px){.page-progress{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:760px){.system-inspector,.system-review{position:static;width:auto;height:auto;min-height:320px;box-shadow:none}.system-review{border-top:1px solid var(--theme-border);border-left:0}}
+.system-node.type-group{align-content:start;background:color-mix(in srgb,var(--theme-accent) 5%,transparent)}.system-empty-links{margin:0;color:var(--theme-muted);font-size:10px;line-height:1.5}
