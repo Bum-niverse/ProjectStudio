@@ -98,6 +98,7 @@ pub fn run() {
             codex_system_design::generate_system_design_with_codex,
             system_design_repository::initialize_system_design,
             system_design_repository::save_system_design_revision,
+            system_design_repository::list_system_design_revisions,
             system_design_repository::create_system_design_proposal,
             system_design_repository::decide_system_design_proposal,
             user_flow_repository::initialize_user_flow,

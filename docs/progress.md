@@ -1,5 +1,12 @@
 # ProjectStudio 개발 진행
 
+## 2026-07-13 시스템 설계 인텔리전스 MVP
+
+- C4 parent 계층, 런타임 정상·실패·복구 시나리오, 품질 속성·제약과 ADR 편집 추가
+- 리비전 구조 비교, 요구사항 연결 후보 승인, 연결성·추적성·복원력 점수와 안티패턴 검토 추가
+- 제한된 import/use 근거 수집과 노드별 구현·커밋·배포 상태 추적 추가
+- PlantUML, Structurizr DSL, runtime sequence Mermaid와 ADR Markdown 내보내기 추가
+
 ## 2026-07-13 C4·런타임·구현 drift 확장
 
 - 하나의 시스템 모델에서 Context, Container, Component, Code 수준을 점진적으로 탐색하는 C4 drill-down을 추가했다.

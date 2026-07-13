@@ -8,16 +8,19 @@ export type SystemDesignSource="user"|"development_mode"|"codex";
 export type SystemDesignViewType="structural"|"runtime"|"deployment"|"development";
 export type ArchitecturePattern="auto"|"layered"|"hub_spoke"|"pipeline"|"event_driven"|"deployment";
 export type C4Level="context"|"container"|"component"|"code";
+export type ImplementationStatus="planned"|"designed"|"implementing"|"implemented"|"tested"|"completed"|"drift_detected"|"deprecated";
+export interface RuntimeScenario{id:string;name:string;description:string;kind:"success"|"failure"|"recovery";userFlowIds:string[];edgeIds:string[];}
+export interface ArchitectureDecision{id:string;title:string;status:"proposed"|"accepted"|"deprecated"|"superseded";problem:string;decision:string;alternatives:string[];tradeoffs:string[];qualityAttributes:string[];relatedFeatureIds:string[];relatedNodeIds:string[];}
 
 export interface SystemDesignNode{
   id:string;type:SystemNodeType;name:string;description:string;technology:string;deployment:string;status:SystemNodeStatus;
   linkedFeatureIds:string[];linkedUserFlowIds:string[];linkedWireframeIds:string[];codePaths:string[];testPaths:string[];configuration:string;
-  c4Level?:C4Level;parentId?:string;position:{x:number;y:number};size:{width:number;height:number};
+  c4Level?:C4Level;parentId?:string;implementationStatus?:ImplementationStatus;branch?:string;commit?:string;deploymentStatus?:string;position:{x:number;y:number};size:{width:number;height:number};
 }
 export interface SystemDesignEdge{
   id:string;source:string;target:string;type:SystemEdgeType;protocol:string;dataFormat:string;isAsync:boolean;sequence?:number;authentication:string;errorHandling:string;description:string;
 }
-export interface SystemDesignSnapshot{schemaVersion:1;title:string;summary:string;viewType?:SystemDesignViewType;architecturePattern?:ArchitecturePattern;activeC4Level?:C4Level;nodes:SystemDesignNode[];edges:SystemDesignEdge[];}
+export interface SystemDesignSnapshot{schemaVersion:1;title:string;summary:string;viewType?:SystemDesignViewType;architecturePattern?:ArchitecturePattern;activeC4Level?:C4Level;activeScenarioId?:string;scenarios?:RuntimeScenario[];decisions?:ArchitectureDecision[];qualityAttributes?:string[];constraints?:string[];nodes:SystemDesignNode[];edges:SystemDesignEdge[];}
 export interface SystemDesignRevision{id:string;designId:string;projectId:string;revisionNumber:number;snapshot:SystemDesignSnapshot;source:SystemDesignSource;createdAt:string;}
 export interface SystemDesignProposal{id:string;projectId:string;designId:string;baseRevisionId:string;proposedSnapshot:SystemDesignSnapshot;summary:string;source:"codex";status:"pending"|"accepted"|"rejected";createdAt:string;decidedAt?:string;rejectionReason?:string;}
 export interface SystemDesignWorkspace{designId:string;projectId:string;revision:SystemDesignRevision;proposals:SystemDesignProposal[];}

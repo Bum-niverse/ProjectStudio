@@ -22,6 +22,12 @@ MVP는 방식 B인 전체 캔버스 JSON snapshot을 선택했다. `system_desig
 
 시스템 설계 snapshot은 노드와 연결을 단일 원본으로 유지하고 `viewType`과 `architecturePattern`을 함께 저장한다. 기존 snapshot에는 두 필드가 없을 수 있으므로 각각 `structural`, `auto`를 기본값으로 읽는다. 뷰마다 노드를 복제하지 않으며 좌표만 선택한 관점과 정렬 전략에서 다시 계산한다.
 
+확장 모델은 `qualityAttributes`, `constraints`, `scenarios`, `decisions`를 snapshot에 저장한다. C4 하위 요소는 `parentId`로 상위 경계와 연결하고 런타임 시나리오는 정상·실패·복구 유형과 순서가 있는 edge ID를 참조한다. AI 결과는 요구사항 연결 후보로 제시해 사용자가 승인하며 기존 검토·구현 메타데이터는 Codex 재생성에서도 보존한다.
+
+검토 점수는 연결성, 요구사항 추적성, 외부 연동 오류 처리와 기능 커버리지를 합성한다. 과도한 허브, 동기 fan-out, 소비자 없는 queue를 검토 후보로 표시하고 리비전 비교는 노드와 edge의 추가·삭제·변경을 ID 기준으로 계산한다.
+
+구현 일치 검사는 저장소 밖 경로와 과도한 탐색을 차단하고 코드·테스트 존재 여부 및 제한된 TypeScript import/export/require와 Rust `use crate` 근거를 수집한다. 노드는 구현 단계와 branch·commit·deployment 상태를 함께 기록할 수 있다.
+
 - 관점: `structural`, `runtime`, `deployment`, `development`
 - 정렬: `auto`, `layered`, `hub_spoke`, `pipeline`, `event_driven`, `deployment`
 - `auto`는 배포 관점, 메시지 큐·이벤트 연결, 그래프 중심 노드, 분기 수를 순서대로 검사해 가장 가까운 패턴을 선택한다.

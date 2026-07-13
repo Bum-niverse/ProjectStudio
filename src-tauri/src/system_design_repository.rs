@@ -35,6 +35,14 @@ pub struct SystemNode {
     pub c4_level: Option<String>,
     #[serde(default)]
     pub parent_id: Option<String>,
+    #[serde(default)]
+    pub implementation_status: Option<String>,
+    #[serde(default)]
+    pub branch: Option<String>,
+    #[serde(default)]
+    pub commit: Option<String>,
+    #[serde(default)]
+    pub deployment_status: Option<String>,
     pub position: Point,
     pub size: Size,
 }
@@ -66,6 +74,16 @@ pub struct SystemSnapshot {
     pub architecture_pattern: String,
     #[serde(default = "default_c4_level")]
     pub active_c4_level: String,
+    #[serde(default)]
+    pub active_scenario_id: Option<String>,
+    #[serde(default)]
+    pub scenarios: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub decisions: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub quality_attributes: Vec<String>,
+    #[serde(default)]
+    pub constraints: Vec<String>,
     pub nodes: Vec<SystemNode>,
     pub edges: Vec<SystemEdge>,
 }
@@ -217,6 +235,19 @@ pub fn validate_snapshot(snapshot: &SystemSnapshot) -> Result<(), String> {
                 .parent_id
                 .as_deref()
                 .is_some_and(|value| value == node.id || !valid_id(value))
+            || node.implementation_status.as_deref().is_some_and(|value| {
+                !matches!(
+                    value,
+                    "planned"
+                        | "designed"
+                        | "implementing"
+                        | "implemented"
+                        | "tested"
+                        | "completed"
+                        | "drift_detected"
+                        | "deprecated"
+                )
+            })
             || ![
                 node.position.x,
                 node.position.y,
@@ -399,6 +430,28 @@ pub async fn save_system_design_revision(
     load_workspace(&mut db, &input.project_id).await
 }
 #[tauri::command]
+pub async fn list_system_design_revisions(
+    app: AppHandle,
+    project_id: String,
+) -> Result<Vec<SystemRevision>, String> {
+    let mut db = open_database(&app).await?;
+    let rows=sqlx::query("SELECT d.id design_id,r.id revision_id,r.revision_number,r.snapshot_json,r.source,r.created_at FROM system_designs d JOIN system_design_revisions r ON r.design_id=d.id WHERE d.project_id=? ORDER BY r.revision_number").bind(&project_id).fetch_all(&mut db).await.map_err(|e|e.to_string())?;
+    rows.into_iter()
+        .map(|row| {
+            let snapshot_json: String = row.try_get("snapshot_json").map_err(|e| e.to_string())?;
+            Ok(SystemRevision {
+                id: row.try_get("revision_id").map_err(|e| e.to_string())?,
+                design_id: row.try_get("design_id").map_err(|e| e.to_string())?,
+                project_id: project_id.clone(),
+                revision_number: row.try_get("revision_number").map_err(|e| e.to_string())?,
+                snapshot: serde_json::from_str(&snapshot_json).map_err(|e| e.to_string())?,
+                source: row.try_get("source").map_err(|e| e.to_string())?,
+                created_at: row.try_get("created_at").map_err(|e| e.to_string())?,
+            })
+        })
+        .collect()
+}
+#[tauri::command]
 pub async fn create_system_design_proposal(
     app: AppHandle,
     input: CreateProposalInput,
@@ -490,6 +543,11 @@ mod tests {
             view_type: "structural".into(),
             architecture_pattern: "auto".into(),
             active_c4_level: "container".into(),
+            active_scenario_id: None,
+            scenarios: vec![],
+            decisions: vec![],
+            quality_attributes: vec![],
+            constraints: vec![],
             nodes: vec![SystemNode {
                 id: "a".into(),
                 r#type: "service".into(),
@@ -506,6 +564,10 @@ mod tests {
                 configuration: "".into(),
                 c4_level: None,
                 parent_id: None,
+                implementation_status: None,
+                branch: None,
+                commit: None,
+                deployment_status: None,
                 position: Point { x: 0.0, y: 0.0 },
                 size: Size {
                     width: 100.0,

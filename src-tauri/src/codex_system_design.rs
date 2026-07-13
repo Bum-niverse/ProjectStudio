@@ -150,8 +150,27 @@ pub async fn generate_system_design_with_codex(
         .map_err(|e| format!("Codex 결과를 읽지 못했습니다: {e}"))?;
     let _ = fs::remove_file(schema_path);
     let _ = fs::remove_file(output_path);
-    let result: SystemSnapshot = serde_json::from_str(&text)
+    let mut result: SystemSnapshot = serde_json::from_str(&text)
         .map_err(|e| format!("Codex 결과 형식이 올바르지 않습니다: {e}"))?;
+    // 제안 schema가 다루지 않는 검토·실행 메타데이터는 승인 시 유실되지 않게 보존한다.
+    result.active_scenario_id = input.current_snapshot.active_scenario_id.clone();
+    result.scenarios = input.current_snapshot.scenarios.clone();
+    result.decisions = input.current_snapshot.decisions.clone();
+    result.quality_attributes = input.current_snapshot.quality_attributes.clone();
+    result.constraints = input.current_snapshot.constraints.clone();
+    for node in &mut result.nodes {
+        if let Some(current) = input
+            .current_snapshot
+            .nodes
+            .iter()
+            .find(|item| item.id == node.id)
+        {
+            node.implementation_status = current.implementation_status.clone();
+            node.branch = current.branch.clone();
+            node.commit = current.commit.clone();
+            node.deployment_status = current.deployment_status.clone();
+        }
+    }
     validate_snapshot(&result)?;
     Ok(result)
 }

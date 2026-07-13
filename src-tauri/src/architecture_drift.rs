@@ -26,7 +26,51 @@ pub struct DriftItem {
     missing_code_paths: Vec<String>,
     existing_test_paths: Vec<String>,
     missing_test_paths: Vec<String>,
+    semantic_evidence: Vec<String>,
     message: String,
+}
+
+fn semantic_evidence(root: &Path, values: &[String]) -> Vec<String> {
+    let mut evidence = Vec::new();
+    for value in values.iter().filter(|value| !value.contains('*')).take(20) {
+        let Some(relative) = safe_relative(value) else {
+            continue;
+        };
+        let Ok(path) = fs::canonicalize(root.join(relative)) else {
+            continue;
+        };
+        if !path.starts_with(root) {
+            continue;
+        }
+        let Ok(metadata) = fs::metadata(&path) else {
+            continue;
+        };
+        if !metadata.is_file() || metadata.len() > 1_000_000 {
+            continue;
+        }
+        let Ok(source) = fs::read_to_string(path) else {
+            continue;
+        };
+        for (index, line) in source.lines().enumerate() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("import ")
+                || trimmed.starts_with("export ") && trimmed.contains(" from ")
+                || trimmed.starts_with("use crate::")
+                || trimmed.contains("require(")
+            {
+                evidence.push(format!(
+                    "{}:{} {}",
+                    value,
+                    index + 1,
+                    trimmed.chars().take(180).collect::<String>()
+                ));
+                if evidence.len() >= 100 {
+                    return evidence;
+                }
+            }
+        }
+    }
+    evidence
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -123,6 +167,7 @@ pub async fn inspect_architecture_drift(input: DriftInput) -> Result<DriftReport
         }
         let (existing_code, missing_code) = inspect_paths(&root, &node.code_paths)?;
         let (existing_test, missing_test) = inspect_paths(&root, &node.test_paths)?;
+        let evidence = semantic_evidence(&root, &existing_code);
         let status = if node.code_paths.is_empty() && node.test_paths.is_empty() {
             "unlinked"
         } else if missing_code.is_empty() && missing_test.is_empty() {
@@ -142,6 +187,7 @@ pub async fn inspect_architecture_drift(input: DriftInput) -> Result<DriftReport
             missing_code_paths: missing_code,
             existing_test_paths: existing_test,
             missing_test_paths: missing_test,
+            semantic_evidence: evidence,
             message: message.into(),
         });
     }

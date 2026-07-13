@@ -68,7 +68,7 @@ fn safe_name(value: &str) -> String {
     let cleaned = value
         .chars()
         .map(|c| {
-            if c.is_ascii_alphanumeric() || matches!(c, '-' | '_') {
+            if c.is_ascii_alphanumeric() || c == '_' {
                 c
             } else {
                 '_'
@@ -77,6 +77,8 @@ fn safe_name(value: &str) -> String {
         .collect::<String>();
     if cleaned.is_empty() {
         "project".to_owned()
+    } else if cleaned.starts_with(|value: char| value.is_ascii_digit()) {
+        format!("n_{cleaned}")
     } else {
         cleaned
     }
@@ -201,6 +203,96 @@ fn system_design_mermaid(design: &SystemSnapshot) -> String {
             safe_name(&edge.source),
             edge.protocol.replace('|', "/"),
             safe_name(&edge.target)
+        ));
+    }
+    out
+}
+fn system_design_plantuml(design: &SystemSnapshot) -> String {
+    let mut out = String::from("@startuml\nleft to right direction\n");
+    for node in &design.nodes {
+        out.push_str(&format!(
+            "component \"{}\" as {}\n",
+            node.name.replace('"', "'"),
+            safe_name(&node.id)
+        ));
+    }
+    for edge in &design.edges {
+        out.push_str(&format!(
+            "{} --> {} : {}\n",
+            safe_name(&edge.source),
+            safe_name(&edge.target),
+            edge.protocol.replace(':', "/")
+        ));
+    }
+    out.push_str("@enduml\n");
+    out
+}
+fn system_design_structurizr(design: &SystemSnapshot) -> String {
+    let mut out =
+        String::from("workspace {\n  model {\n    project = softwareSystem \"Project\" {\n");
+    for node in &design.nodes {
+        out.push_str(&format!(
+            "      {} = container \"{}\" \"{}\" \"{}\"\n",
+            safe_name(&node.id),
+            node.name.replace('"', "'"),
+            node.description.replace('"', "'"),
+            node.technology.replace('"', "'")
+        ));
+    }
+    out.push_str("    }\n");
+    for edge in &design.edges {
+        out.push_str(&format!(
+            "    {} -> {} \"{}\" \"{}\"\n",
+            safe_name(&edge.source),
+            safe_name(&edge.target),
+            edge.description.replace('"', "'"),
+            edge.protocol.replace('"', "'")
+        ));
+    }
+    out.push_str("  }\n  views { container project { include *; autoLayout lr } }\n}\n");
+    out
+}
+fn runtime_sequence_mermaid(design: &SystemSnapshot) -> String {
+    let mut out = String::from("sequenceDiagram\n");
+    let mut edges = design
+        .edges
+        .iter()
+        .filter(|edge| edge.sequence.is_some())
+        .collect::<Vec<_>>();
+    edges.sort_by_key(|edge| edge.sequence);
+    for edge in edges {
+        out.push_str(&format!(
+            "  {}{}{}: {}\n",
+            safe_name(&edge.source),
+            if edge.is_async { "-->>" } else { "->>" },
+            safe_name(&edge.target),
+            edge.description.replace(':', "/")
+        ));
+    }
+    out
+}
+fn decisions_markdown(design: &SystemSnapshot) -> String {
+    let mut out = String::from("# Architecture Decision Records\n\n");
+    for decision in &design.decisions {
+        let title = decision
+            .get("title")
+            .and_then(|v| v.as_str())
+            .unwrap_or("설계 결정");
+        let status = decision
+            .get("status")
+            .and_then(|v| v.as_str())
+            .unwrap_or("proposed");
+        let problem = decision
+            .get("problem")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let selected = decision
+            .get("decision")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        out.push_str(&format!(
+            "## {}\n\n상태: {}\n\n### 문제\n{}\n\n### 결정\n{}\n\n",
+            title, status, problem, selected
         ));
     }
     out
@@ -350,6 +442,15 @@ pub async fn export_project_package(
                 )
                 .map_err(|e| e.to_string())?;
                 files.push("system-design.mmd".to_owned());
+                for (name, content) in [
+                    ("system-design.puml", system_design_plantuml(design)),
+                    ("structurizr.dsl", system_design_structurizr(design)),
+                    ("runtime-sequence.mmd", runtime_sequence_mermaid(design)),
+                    ("architecture-decisions.md", decisions_markdown(design)),
+                ] {
+                    fs::write(output.join(name), content).map_err(|e| e.to_string())?;
+                    files.push(name.to_owned());
+                }
             }
         }
     }
