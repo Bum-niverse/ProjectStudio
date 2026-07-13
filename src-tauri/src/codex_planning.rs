@@ -110,7 +110,10 @@ fn schema() -> Value {
             "status":{"type":"string","enum":["planned","active","deprecated"]},"linkedFeatureIds":{"type":"array","items":{"type":"string"}},
             "linkedUserFlowIds":{"type":"array","items":{"type":"string"}},"linkedWireframeIds":{"type":"array","maxItems":0},
             "codePaths":{"type":"array","maxItems":0},"testPaths":{"type":"array","maxItems":0},"configuration":{"type":"string"},
-            "c4Level":{"type":"string","enum":["context","container","component","code"]},"parentId":{"type":"string"},"position":position,"size":size
+            "c4Level":{"type":"string","enum":["context","container","component","code"]},"parentId":{"type":"string"},
+            "dataMlType":{"type":"string","enum":["data_source","collector","validation_job","cleaning_job","transform_job","join_job","feature_job","training_job","evaluation_job","batch_inference","scheduler","raw_storage","processed_storage","feature_store","model_registry","artifact_storage","experiment_store","notebook","analysis","baseline_model","candidate_model","report","dashboard","model_service"]},
+            "inputSchema":{"type":"string"},"outputSchema":{"type":"string"},"executionMode":{"type":"string","enum":["batch","streaming","interactive"]},"schedule":{"type":"string"},"reproducibility":{"type":"string"},"dataVersion":{"type":"string"},"modelVersion":{"type":"string"},
+            "relatedDatasetIds":{"type":"array","items":{"type":"string"}},"relatedTaskIds":{"type":"array","items":{"type":"string"}},"position":position,"size":size
         }),
         &[
             "id",
@@ -450,7 +453,7 @@ pub async fn generate_project_plan_with_codex(
     ) {
         "userFlow는 기능명세를 복사하지 말고 실제 화면 이동만 작성한다. 각 레인은 시작(phase)→현재 화면(screen)→구체적인 클릭·입력(action)→다음 화면 또는 사용자가 보는 완료(result)를 갖는다. 내부 구현을 사용자 행동으로 쓰지 마라."
     } else {
-        "userFlow 필드는 호환 가능한 실행 파이프라인으로 사용한다. 화면과 버튼을 만들지 말고 입력·데이터 수집→검증·정제→핵심 처리·학습·분석→평가·산출물(result)을 좌→우로 작성한다. 머신러닝은 시간 분할, 누수 검사, 기준선, 학습, 평가와 모델 버전을 포함하고 데이터 분석은 스키마, 병합 키·카디널리티, 결측·중복·이상치, 분석과 결과 계보를 포함한다."
+        "userFlow 필드는 호환 가능한 실행 파이프라인으로 사용한다. 화면과 버튼을 만들지 말고 입력·데이터 수집→검증·정제→핵심 처리·학습·분석→평가·산출물(result)을 좌→우로 작성한다. 머신러닝은 시간 분할, 누수 검사, 기준선, 학습, 평가와 모델 버전을 포함하고 데이터 분석은 스키마, 병합 키·카디널리티, 결측·중복·이상치, 분석과 결과 계보를 포함한다. systemDesign의 모든 데이터·ML 노드에는 dataMlType, inputSchema, outputSchema, executionMode, reproducibility를 작성한다. 모델 프로젝트는 validation_job, baseline_model, training_job, evaluation_job과 model_registry를 반드시 분리한다."
     };
     let prompt=format!("ProjectStudio의 문제 정의서를 읽고 기능명세, 작업 흐름, 시스템 설계를 하나의 JSON으로 생성하라. 프로젝트 유형은 {project_type}, 세부 유형은 {project_subtype}이며 유형에 맞지 않는 화면이나 단계를 억지로 만들지 마라. 세부 유형만으로 데이터·타깃·분할·검정·지표·모델을 확정하지 말고 제안 근거와 가정을 설명에 남겨라. 기능명세는 루트 1개 아래 대주제→하위 기능→처리·결과·검증 규칙의 3~4단계 트리로 30개 이상 만들고 각 기능에 검증 가능한 수용 기준 2~6개를 작성한다. {workflow_rules} 모든 userFlow laneId는 기능명세 루트 바로 아래 대주제 ID여야 하고 각 레인은 phase와 result를 포함한다. 시스템 설계는 실행 환경·서비스·데이터 저장소·비동기 처리·외부 시스템을 필요한 만큼 분리하고 기술, 배포, 프로토콜, 데이터 형식, 인증, 오류 복구를 명시하라. 모든 ID는 영문·숫자·점·밑줄·하이픈만 사용하며 userFlow projectId는 '{project_id}'여야 한다. 실제 존재하는 ID만 추적 링크에 사용하고 설명은 한국어로 작성하라. 프로젝트명: {project_name}\n프로젝트 ID: {project_id}\n\nPRD:\n{prd}",project_type=input.project_type,project_subtype=input.project_subtype.as_deref().unwrap_or("미지정"),workflow_rules=workflow_rules,project_id=input.project_id,project_name=input.project_name.trim(),prd=input.prd_markdown);
     let mut child = Command::new(program)

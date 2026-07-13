@@ -9,10 +9,18 @@ describe("createUserFlowSpec",()=>{
     expect(features.some(feature=>feature.title==="시간 순서 검증과 백테스트")).toBe(true);
     expect(features.some(feature=>feature.title==="PRD 생성·편집")).toBe(false);
     const spec=createExecutionPipelineSpec(projectId,features,"machine_learning");
-    expect(spec.lanes.map(lane=>lane.title)).toContain("피처와 예측 대상 생성");
+    expect(spec.lanes.map(lane=>lane.title)).toEqual(expect.arrayContaining(["데이터 준비","분할·누수","모델링·평가","해석·전달"]));
+    expect(spec.nodes.some(node=>node.title.includes("기준 모델"))).toBe(true);
     expect(spec.nodes.some(node=>node.kind==="screen")).toBe(false);
     expect(spec.nodes.some(node=>node.kind==="phase")).toBe(true);
     expect(spec.nodes.some(node=>node.kind==="result")).toBe(true);
+  });
+  it("시계열과 통계 프로젝트에 특화 단계를 적용한다",()=>{
+    const ml=createExecutionPipelineSpec("ml",[],"machine_learning","time_series_forecasting");
+    const analysis=createExecutionPipelineSpec("da",[],"data_analysis","statistical");
+    expect(ml.nodes.some(node=>node.title.includes("rolling"))).toBe(true);
+    expect(ml.nodes.some(node=>node.title.includes("MASE"))).toBe(true);
+    expect(analysis.nodes.some(node=>node.title.includes("효과 크기"))).toBe(true);
   });
   it("요구사항별 스윔레인과 다단계 노드를 만든다",()=>{
     const projectId="project-flow";const spec=createUserFlowSpec(projectId,createDevelopmentFeatureSpec(projectId));

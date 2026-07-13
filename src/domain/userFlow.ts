@@ -1,8 +1,8 @@
 import type { FeatureSpec, NodeColorKey } from "./feature";
-import type { ProjectType } from "./project";
+import type { ProjectSubtype, ProjectType } from "./project";
 
 export type UserFlowNodeKind="phase"|"screen"|"action"|"result"|"decision";
-export interface UserFlowNode{id:string;projectId:string;laneId:string;title:string;description:string;kind:UserFlowNodeKind;positionX:number;positionY:number;colorKey?:NodeColorKey;depth?:number;parentId?:string;linkedFeatureIds?:string[];branchCondition?:string}
+export interface UserFlowNode{id:string;projectId:string;laneId:string;title:string;description:string;kind:UserFlowNodeKind;positionX:number;positionY:number;colorKey?:NodeColorKey;depth?:number;parentId?:string;linkedFeatureIds?:string[];branchCondition?:string;inputArtifacts?:string[];outputArtifacts?:string[];methods?:string[];validation?:string;failureHandling?:string;codePaths?:string[];testPaths?:string[];completionCriteria?:string}
 export interface UserFlowEdge{id:string;projectId:string;sourceNodeId:string;targetNodeId:string}
 export interface UserFlowLane{id:string;title:string;requirementId?:string;order?:number;positionY:number;height:number;colorKey?:NodeColorKey}
 export interface UserFlowSpec{nodes:UserFlowNode[];edges:UserFlowEdge[];lanes:UserFlowLane[]}
@@ -61,9 +61,33 @@ export function createUserFlowSpec(projectId:string,features:FeatureSpec[]):User
   });return{nodes,edges,lanes};
 }
 
-export function createExecutionPipelineSpec(projectId:string,features:FeatureSpec[],projectType:ProjectType):UserFlowSpec{
-  const root=features.find(feature=>!feature.parentId);const stages=features.filter(feature=>feature.parentId===root?.id).sort((a,b)=>a.sortOrder-b.sortOrder);const nodes:UserFlowNode[]=[];const edges:UserFlowEdge[]=[];const lanes:UserFlowLane[]=[];let laneY=0;
-  stages.forEach((stage,laneIndex)=>{const colorKey=FLOW_COLORS[laneIndex%FLOW_COLORS.length];const children=features.filter(feature=>feature.parentId===stage.id).sort((a,b)=>a.sortOrder-b.sortOrder).slice(0,8);const height=260;lanes.push({id:stage.id,title:stage.title,requirementId:stage.id,order:laneIndex,positionY:laneY,height,colorKey});const sequence=[stage,...children];sequence.forEach((feature,index)=>{const id=`pipeline-${feature.id}`;const isLast=index===sequence.length-1;nodes.push({id,projectId,laneId:stage.id,title:feature.title,description:feature.description,kind:index===0?"phase":isLast?"result":"action",positionX:90+index*280,positionY:laneY+height/2,colorKey,depth:index,parentId:index?`pipeline-${sequence[index-1].id}`:undefined,linkedFeatureIds:[feature.id]});if(index)edges.push({id:`edge-pipeline-${sequence[index-1].id}-${feature.id}`,projectId,sourceNodeId:`pipeline-${sequence[index-1].id}`,targetNodeId:id});});laneY+=height+24;});
-  if(!stages.length){const label=projectType==="machine_learning"?"모델 실험":projectType==="data_analysis"?"분석 실행":"프로그램 실행";lanes.push({id:"execution",title:label,order:0,positionY:0,height:260,colorKey:"slate"});nodes.push({id:`pipeline-${projectId}-start`,projectId,laneId:"execution",title:`${label} 시작`,description:"입력과 실행 조건을 확인한다.",kind:"phase",positionX:90,positionY:130,colorKey:"slate",depth:0});}
-  return{nodes,edges,lanes};
+export function createExecutionPipelineSpec(projectId:string,features:FeatureSpec[],projectType:ProjectType,subtype?:ProjectSubtype):UserFlowSpec{
+  const root=features.find(feature=>!feature.parentId);const featureStages=features.filter(feature=>feature.parentId===root?.id).sort((a,b)=>a.sortOrder-b.sortOrder);
+  if(projectType!=="machine_learning"&&projectType!=="data_analysis"){
+    const nodes:UserFlowNode[]=[],edges:UserFlowEdge[]=[],lanes:UserFlowLane[]=[];let laneY=0;
+    featureStages.forEach((stage,laneIndex)=>{const colorKey=FLOW_COLORS[laneIndex%FLOW_COLORS.length];const sequence=[stage,...features.filter(feature=>feature.parentId===stage.id).sort((a,b)=>a.sortOrder-b.sortOrder).slice(0,8)];const height=260;lanes.push({id:stage.id,title:stage.title,requirementId:stage.id,order:laneIndex,positionY:laneY,height,colorKey});sequence.forEach((feature,index)=>{const id=`pipeline-${feature.id}`;nodes.push({id,projectId,laneId:stage.id,title:feature.title,description:feature.description,kind:index===0?"phase":index===sequence.length-1?"result":"action",positionX:90+index*280,positionY:laneY+height/2,colorKey,depth:index,parentId:index?`pipeline-${sequence[index-1].id}`:undefined,linkedFeatureIds:[feature.id]});if(index)edges.push({id:`edge-pipeline-${sequence[index-1].id}-${feature.id}`,projectId,sourceNodeId:`pipeline-${sequence[index-1].id}`,targetNodeId:id});});laneY+=height+24;});return{nodes,edges,lanes};
+  }
+  const laneDefinitions=projectType==="machine_learning"?mlPipeline(subtype):analysisPipeline(subtype);const nodes:UserFlowNode[]=[],edges:UserFlowEdge[]=[],lanes:UserFlowLane[]=[];let laneY=0;
+  laneDefinitions.forEach((lane,laneIndex)=>{const colorKey=FLOW_COLORS[laneIndex%FLOW_COLORS.length];const height=Math.max(240,lane.steps.length*12+180);const laneId=featureStages[laneIndex]?.id??`data-lane-${laneIndex}`;lanes.push({id:laneId,title:lane.title,requirementId:featureStages[laneIndex]?.id,order:laneIndex,positionY:laneY,height,colorKey});lane.steps.forEach((title,index)=>{const id=`pipeline-${laneIndex}-${index}`;nodes.push({id,projectId,laneId,title,description:lane.descriptions[index]??`${title}의 입력·출력과 완료 기준을 확인한다.`,kind:index===0?"phase":index===lane.steps.length-1?"result":/검증|평가|검정|승인/.test(title)?"decision":"action",positionX:90+index*280,positionY:laneY+height/2,colorKey,depth:index,parentId:index?`pipeline-${laneIndex}-${index-1}`:undefined,linkedFeatureIds:featureStages[laneIndex]?[featureStages[laneIndex].id]:[],inputArtifacts:index?[lane.steps[index-1]]:["데이터 명세"],outputArtifacts:[title],methods:[],validation:/검증|평가|검정|승인/.test(title)?"통과·실패 기준을 사용자 검토 후 확정":"입력·출력 계약 확인",failureHandling:"실패 원인과 재실행 조건을 기록하고 다음 단계 진행을 차단",codePaths:[],testPaths:[],completionCriteria:`${title} 산출물과 검증 근거가 저장되어 있다.`});if(index)edges.push({id:`edge-pipeline-${laneIndex}-${index-1}-${index}`,projectId,sourceNodeId:`pipeline-${laneIndex}-${index-1}`,targetNodeId:id});});laneY+=height+24;});return{nodes,edges,lanes};
+}
+
+type PipelineLane={title:string;steps:string[];descriptions:string[]};
+function analysisPipeline(subtype?:ProjectSubtype):PipelineLane[]{
+  const analysis=subtype==="statistical"?["검정 가정 확인","귀무·대립가설 검정","효과 크기·보정 평가","해석 승인"]:subtype==="time_series_analysis"?["시간 인덱스 정렬","추세·계절성 분석","기간별 비교","시계열 해석"]:["기술통계","분포·집단 비교","관계·패턴 분석","분석 해석"];
+  return[
+    {title:"데이터 준비",steps:["원본 데이터 계약","스키마 검증","정제·표준화","분석 데이터 저장"],descriptions:["출처·라이선스·기준 시점을 확인한다.","필수 컬럼·타입·키를 검사한다.","원본을 보존하고 처리 규칙을 적용한다.","버전이 있는 분석 입력을 만든다."]},
+    {title:"품질·병합",steps:["조인 키 확인","카디널리티 검증","결측·중복·이상치 검사","품질 승인"],descriptions:["키와 단위를 확인한다.","N:N 행 증폭을 차단한다.","분포 변화와 실패 행을 기록한다.","분석 가능한 상태인지 결정한다."]},
+    {title:"탐색·분석",steps:analysis,descriptions:analysis.map(step=>`${step}의 방법·가정·산출물을 기록한다.`)},
+    {title:"보고",steps:["핵심 결과 시각화","한계·편향 검토","보고서 작성","이해관계자 검토 완료"],descriptions:["질문과 직접 연결된 도표를 만든다.","인과 단정과 표본 편향을 검토한다.","근거와 다음 행동을 정리한다.","승인된 산출물을 보존한다."]},
+  ];
+}
+function mlPipeline(subtype?:ProjectSubtype):PipelineLane[]{
+  const split=subtype==="time_series_forecasting"?"시간 기반·rolling 분할":subtype==="classification"?"계층화 데이터 분할":subtype==="recommendation"?"사용자·시간 기준 분할":"그룹·시간·무작위 분할 선택";
+  const specialty=subtype==="recommendation"?["인기 기반 기준 모델","후보 추천 모델","Precision·Recall·NDCG@K"]:subtype==="anomaly_detection"?["규칙 기반 기준선","이상 탐지 후보 모델","오탐·미탐 비용 평가"]:subtype==="time_series_forecasting"?["직전 값 기준 모델","후보 예측 모델","MAE·MASE·기간별 오류"]:["단순 기준 모델","후보 모델 학습","핵심·보조 지표 평가"];
+  return[
+    {title:"데이터 준비",steps:["원본 데이터 계약","스키마·시점 검증","정제·피처 후보 생성","학습 데이터 버전 저장"],descriptions:["출처와 관측 단위를 확인한다.","타깃 사용 가능 시점과 미래 정보를 검사한다.","분할 전후 적용 범위를 구분한다.","입력 버전과 생성 코드를 기록한다."]},
+    {title:"분할·누수",steps:["타깃·예측 시점 확정",split,"분할별 전처리 적합","누수 검증 승인"],descriptions:["관측·입력·예측 시점을 기록한다.","데이터 특성에 맞는 분할 이유를 승인한다.","검증·테스트 통계가 학습에 유입되지 않게 한다.","미래·타깃 파생 정보가 없음을 확인한다."]},
+    {title:"모델링·평가",steps:specialty,descriptions:["후보 모델보다 먼저 비교 기준을 실행한다.","seed·환경·하이퍼파라미터를 기록한다.","핵심 지표와 보조 지표·그룹별 오류를 함께 저장한다."]},
+    {title:"해석·전달",steps:["오류 분석","설명 가능성 검토","모델·결과 버전 저장","배치·온라인 전달 승인"],descriptions:["실패 집단과 경계 사례를 분석한다.","사용자 요구에 맞는 설명을 검토한다.","전처리·모델·평가 결과 버전을 묶는다.","추론 지연·입력 스키마·모니터링 계획을 확인한다."]},
+  ];
 }

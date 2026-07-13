@@ -1,5 +1,6 @@
 import type { FeatureSpec } from "./feature";
 import type { UserFlowNode } from "./userFlow";
+import type { ProjectSubtype, ProjectType } from "./project";
 
 export type SystemNodeType="client"|"service"|"database"|"cache"|"queue"|"external"|"component"|"group";
 export type SystemNodeStatus="planned"|"active"|"deprecated";
@@ -16,15 +17,18 @@ export interface SystemDesignNode{
   id:string;type:SystemNodeType;name:string;description:string;technology:string;deployment:string;status:SystemNodeStatus;
   linkedFeatureIds:string[];linkedUserFlowIds:string[];linkedWireframeIds:string[];codePaths:string[];testPaths:string[];configuration:string;
   c4Level?:C4Level;parentId?:string;implementationStatus?:ImplementationStatus;branch?:string;commit?:string;deploymentStatus?:string;position:{x:number;y:number};size:{width:number;height:number};
+  dataMlType?:"data_source"|"collector"|"validation_job"|"cleaning_job"|"transform_job"|"join_job"|"feature_job"|"training_job"|"evaluation_job"|"batch_inference"|"scheduler"|"raw_storage"|"processed_storage"|"feature_store"|"model_registry"|"artifact_storage"|"experiment_store"|"notebook"|"analysis"|"baseline_model"|"candidate_model"|"report"|"dashboard"|"model_service";
+  inputSchema?:string;outputSchema?:string;executionMode?:"batch"|"streaming"|"interactive";schedule?:string;reproducibility?:string;dataVersion?:string;modelVersion?:string;relatedDatasetIds?:string[];relatedTaskIds?:string[];
 }
 export interface SystemDesignEdge{
   id:string;source:string;target:string;type:SystemEdgeType;protocol:string;dataFormat:string;isAsync:boolean;sequence?:number;authentication:string;errorHandling:string;description:string;
+  schema?:string;executionOrder?:number;storageLocation?:string;isEncrypted?:boolean;containsSensitiveData?:boolean;
 }
 export interface SystemDesignSnapshot{schemaVersion:1;title:string;summary:string;viewType?:SystemDesignViewType;architecturePattern?:ArchitecturePattern;activeC4Level?:C4Level;activeScenarioId?:string;scenarios?:RuntimeScenario[];decisions?:ArchitectureDecision[];qualityAttributes?:string[];constraints?:string[];nodes:SystemDesignNode[];edges:SystemDesignEdge[];}
 export interface SystemDesignRevision{id:string;designId:string;projectId:string;revisionNumber:number;snapshot:SystemDesignSnapshot;source:SystemDesignSource;createdAt:string;}
 export interface SystemDesignProposal{id:string;projectId:string;designId:string;baseRevisionId:string;proposedSnapshot:SystemDesignSnapshot;summary:string;source:"codex";status:"pending"|"accepted"|"rejected";createdAt:string;decidedAt?:string;rejectionReason?:string;}
 export interface SystemDesignWorkspace{designId:string;projectId:string;revision:SystemDesignRevision;proposals:SystemDesignProposal[];}
-export interface SystemDesignWarning{id:string;kind:"disconnected"|"unlinked_feature"|"missing_datastore"|"external_error"|"missing_auth"|"cycle"|"missing_node"|"duplicate_id"|"direct_database"|"missing_protocol";message:string;targetId?:string;}
+export interface SystemDesignWarning{id:string;kind:"disconnected"|"unlinked_feature"|"missing_datastore"|"external_error"|"missing_auth"|"cycle"|"missing_node"|"duplicate_id"|"direct_database"|"missing_protocol"|"data_quality"|"data_leakage"|"reproducibility"|"missing_baseline"|"missing_evaluation"|"missing_artifact"|"sensitive_transfer"|"feature_skew";message:string;targetId?:string;}
 
 export function moveNodesContainedByGroup(nodes:SystemDesignNode[],groupId:string,nextPosition:{x:number;y:number}):SystemDesignNode[]{
   const group=nodes.find(node=>node.id===groupId&&node.type==="group");
@@ -85,10 +89,34 @@ export function reviewSystemDesign(snapshot:SystemDesignSnapshot):SystemDesignWa
     if(!edge.protocol.trim()&&edge.type!=="dependency")warnings.push({id:`protocol-${edge.id}`,kind:"missing_protocol",targetId:edge.id,message:`‘${edge.description||edge.id}’ 연결의 통신 프로토콜이 정의되지 않았습니다.`});
   }
   const adjacency=new Map<string,string[]>();for(const edge of snapshot.edges)adjacency.set(edge.source,[...(adjacency.get(edge.source)??[]),edge.target]);const visiting=new Set<string>(),visited=new Set<string>();let hasCycle=false;const visit=(id:string)=>{if(visiting.has(id)){hasCycle=true;return;}if(visited.has(id))return;visiting.add(id);for(const next of adjacency.get(id)??[])visit(next);visiting.delete(id);visited.add(id);};for(const id of ids)visit(id);if(hasCycle)warnings.push({id:"cycle",kind:"cycle",message:"순환 의존성 가능성이 있습니다. 의도된 양방향 통신인지 검토해 주세요."});
+  const dataNodes=snapshot.nodes.filter(node=>node.dataMlType);if(dataNodes.length){
+    if(!dataNodes.some(node=>node.dataMlType==="validation_job"))warnings.push({id:"data-validation",kind:"data_quality",message:"입력 스키마와 데이터 품질을 검증하는 단계가 없습니다."});
+    if(dataNodes.some(node=>node.dataMlType==="training_job")&&!dataNodes.some(node=>node.dataMlType==="baseline_model"))warnings.push({id:"baseline",kind:"missing_baseline",message:"후보 모델과 비교할 기준 모델이 없습니다."});
+    if(dataNodes.some(node=>node.dataMlType==="training_job")&&!dataNodes.some(node=>node.dataMlType==="evaluation_job"))warnings.push({id:"evaluation",kind:"missing_evaluation",message:"학습 결과를 독립 데이터로 평가하는 단계가 없습니다."});
+    if(dataNodes.some(node=>["training_job","candidate_model"].includes(node.dataMlType??""))&&!dataNodes.some(node=>["model_registry","artifact_storage","experiment_store"].includes(node.dataMlType??"")))warnings.push({id:"artifact",kind:"missing_artifact",message:"모델·실험 결과의 버전 저장 위치가 없습니다."});
+    for(const node of dataNodes){if(["training_job","evaluation_job","feature_job"].includes(node.dataMlType??"")&&!node.reproducibility?.trim())warnings.push({id:`repro-${node.id}`,kind:"reproducibility",targetId:node.id,message:`‘${node.name}’에 seed·환경·버전 재현 설정이 없습니다.`});}
+    for(const edge of snapshot.edges){if(edge.containsSensitiveData&&!edge.isEncrypted)warnings.push({id:`sensitive-${edge.id}`,kind:"sensitive_transfer",targetId:edge.id,message:`‘${edge.description||edge.id}’에서 민감 데이터가 암호화 없이 전달될 수 있습니다.`});}
+    const featureJobs=dataNodes.filter(node=>node.dataMlType==="feature_job");if(featureJobs.length>1)warnings.push({id:"feature-skew",kind:"feature_skew",message:"학습과 추론의 피처 생성 경로가 분리되어 불일치할 수 있습니다."});
+  }
   return warnings;
 }
 
+export function createDataMlSystemDesign(projectId:string,features:FeatureSpec[],flows:UserFlowNode[],projectType:ProjectType,subtype?:ProjectSubtype):SystemDesignSnapshot{
+  const featureIds=features.filter(feature=>feature.parentId).slice(0,12).map(feature=>feature.id);const flowIds=flows.slice(0,12).map(flow=>flow.id);const isMl=projectType==="machine_learning";
+  const node=(suffix:string,type:SystemNodeType,name:string,dataMlType:SystemDesignNode["dataMlType"],x:number,y:number,technology:string):SystemDesignNode=>({id:`${projectId}-${suffix}`,type,name,description:`${name}의 입력·출력 계약과 실패 복구를 관리한다.`,technology,deployment:"Local project environment",status:"planned",linkedFeatureIds:featureIds,linkedUserFlowIds:flowIds,linkedWireframeIds:[],codePaths:[],testPaths:[],configuration:"",c4Level:"container",implementationStatus:"planned",position:{x,y},size:{width:230,height:126},dataMlType,inputSchema:"미정",outputSchema:"미정",executionMode:"batch",reproducibility:"seed·환경·입력 버전 기록",relatedDatasetIds:[],relatedTaskIds:[]});
+  const nodes:SystemDesignNode[]=[node("source","external","데이터 소스","data_source",60,220,"CSV / API / Database"),node("collect","service","수집 작업","collector",360,220,"Python"),node("validate","service","스키마·품질 검증","validation_job",660,220,"Python tests"),node("raw","database","원본 저장소","raw_storage",960,80,"Immutable files"),node("transform","service",isMl?"정제·피처 파이프라인":"정제·분석 데이터 생성",isMl?"feature_job":"transform_job",960,300,"Python package"),node("processed","database","처리 데이터 저장소","processed_storage",1260,300,"Parquet / Database")];
+  if(isMl)nodes.push(node("baseline","component",subtype==="time_series_forecasting"?"직전 값 기준 모델":"기준 모델","baseline_model",1560,80,"Python"),node("train","service","학습 파이프라인","training_job",1560,300,"Python ML"),node("evaluate","service","평가·오류 분석","evaluation_job",1860,300,"Metrics / Explainability"),node("registry","database","모델·실험 저장소","model_registry",2160,160,"Artifacts / Registry"),node("serve","service","배치·온라인 추론","batch_inference",2160,380,"Batch / API"));
+  else nodes.push(node("analysis","component",subtype==="statistical"?"통계 분석 모듈":"EDA·분석 모듈","analysis",1560,300,"Notebook / Python package"),node("artifact","database","분석 산출물 저장소","artifact_storage",1860,160,"Reports / Charts"),node("report","client","보고서·대시보드","report",2160,300,"Markdown / Dashboard"));
+  const edge=(source:string,target:string,description:string,sequence:number):SystemDesignEdge=>({id:`edge-${source}-${target}`,source:`${projectId}-${source}`,target:`${projectId}-${target}`,type:target.includes("raw")||target.includes("processed")||target.includes("registry")||target.includes("artifact")?"file":"dependency",protocol:"Local file / function call",dataFormat:"명세에서 확정",isAsync:false,sequence,authentication:"로컬 사용자 권한",errorHandling:"실패 상태와 재실행 가능한 로그 기록",description,schema:"명세에서 확정",executionOrder:sequence,isEncrypted:false,containsSensitiveData:false});
+  const edges=[edge("source","collect","원본 수집",1),edge("collect","validate","수집 데이터 검증",2),edge("validate","raw","검증된 원본 보존",3),edge("validate","transform","검증 통과 데이터 전달",4),edge("transform","processed","처리 데이터 저장",5)];
+  if(isMl)edges.push(edge("processed","baseline","기준 모델 입력",6),edge("processed","train","학습 입력",7),edge("baseline","evaluate","기준 지표",8),edge("train","evaluate","후보 모델 평가",9),edge("evaluate","registry","모델·평가 결과 버전 저장",10),edge("registry","serve","승인 모델 전달",11));else edges.push(edge("processed","analysis","분석 입력",6),edge("analysis","artifact","표·차트·결과 저장",7),edge("artifact","report","승인된 결과 제공",8));
+  return{schemaVersion:1,title:isMl?"ML 파이프라인 설계":"데이터 시스템 설계",summary:"데이터 출처부터 검증·처리·분석 또는 학습·평가·산출물까지 계보를 추적합니다.",viewType:"structural",architecturePattern:"pipeline",activeC4Level:"container",qualityAttributes:["재현성","데이터 무결성","추적성"],constraints:["원본 데이터 불변","승인 전 모델·결론 확정 금지"],nodes,edges};
+}
+
 export function createInitialSystemDesign(projectId:string,features:FeatureSpec[],flows:UserFlowNode[]):SystemDesignSnapshot{
+  const planningText=features.map(feature=>`${feature.title} ${feature.description}`).join(" ");
+  if(/모델|학습|예측|타깃|추천|분류|회귀/.test(planningText))return createDataMlSystemDesign(projectId,features,flows,"machine_learning");
+  if(/데이터셋|데이터 품질|통계|탐색적 분석|시계열 분석|대시보드/.test(planningText))return createDataMlSystemDesign(projectId,features,flows,"data_analysis");
   const featureIds=features.filter(feature=>feature.parentId).slice(0,8).map(feature=>feature.id);const flowIds=flows.slice(0,6).map(flow=>flow.id);
   return {schemaVersion:1,title:"시스템 설계",summary:"기능명세와 사용자 흐름을 실제 구현 컴포넌트로 연결합니다.",viewType:"structural",architecturePattern:"auto",activeC4Level:"container",nodes:[
     {id:`${projectId}-client`,type:"client",name:"데스크톱 클라이언트",description:"사용자 입력과 시각적 기획 화면을 제공한다.",technology:"React / TypeScript",deployment:"Tauri WebView",status:"active",linkedFeatureIds:featureIds.slice(0,3),linkedUserFlowIds:flowIds.slice(0,2),linkedWireframeIds:[],codePaths:["src"],testPaths:["src/**/*.test.ts"],configuration:"",position:{x:80,y:220},size:{width:220,height:120}},
