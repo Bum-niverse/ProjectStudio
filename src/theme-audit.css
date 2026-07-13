@@ -46,6 +46,14 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .export-page>footer button,.wireframe-setup>footer button{flex:0 0 auto;white-space:nowrap}
 .login-card,.login-security{color:var(--theme-text)}.login-copy>p:last-child,.login-security span,.login-card>small{color:var(--theme-muted)}
 .login-copy h2{word-break:keep-all;overflow-wrap:break-word;text-wrap:balance}.login-copy>p:last-child,.login-security span,.login-card>small{word-break:keep-all;overflow-wrap:break-word}.github-login-button,.github-auth-start{word-break:keep-all}
+
+/* 사람이 읽는 한국어 UI 문구는 음절 단위로 쪼개지지 않게 한다. 경로와 코드만 긴 문자열 분리를 허용한다. */
+.page-shell button,.page-shell h1,.page-shell h2,.page-shell h3,.page-shell h4,.page-shell h5,.page-shell label,.page-shell p,.page-shell strong,.page-shell small{word-break:keep-all;overflow-wrap:break-word}
+.page-shell code,.page-shell pre{word-break:normal;overflow-wrap:anywhere}
+.page-shell .theme-card strong,.page-shell .theme-card small,.page-shell .provider-guidance p,.page-shell .provider-grid button strong,.page-shell .provider-grid button small,.page-shell .wireframe-page-group label strong,.page-shell .wireframe-page-group label span,.page-shell .wireframe-group-toggle strong,.page-shell .export-check-list label{word-break:keep-all;overflow-wrap:break-word}
+.variable-heading>div{min-width:0}
+.variable-heading>button{flex:0 0 auto;width:auto;min-width:max-content;padding:8px 12px;line-height:1.35;white-space:nowrap}
+.data-quality-panel h3,.data-quality-panel li{word-break:keep-all;overflow-wrap:break-word}
 .font-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}.font-card{display:grid;gap:9px;min-width:0;margin:0;padding:16px;color:var(--theme-text);border:1px solid var(--theme-border);background:var(--theme-surface-2);text-align:left}.font-card.selected{border-color:var(--theme-accent);box-shadow:inset 3px 0 var(--theme-accent)}.font-card span{font-size:17px;line-height:1.55}.font-card small{color:var(--theme-muted)}.font-card[data-font-preview="ibm-plex-kr"]{font-family:"IBM Plex Sans KR",sans-serif!important}.font-card[data-font-preview="system"]{font-family:Pretendard,"Segoe UI",sans-serif!important}
 :root[data-theme="light"] .secondary:hover:not(:disabled),:root[data-theme="light"] .topbar-actions button:hover:not(:disabled),:root[data-theme="light"] .view-switch button:hover:not(:disabled),:root[data-theme="light"] .node-action-toolbar button:hover:not(:disabled){color:var(--theme-text)!important;background:var(--theme-surface-2)!important}
 @media(max-width:1180px){.topbar-actions .mode-badge{display:none}.theme-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.connection-form{grid-template-columns:1fr 1fr}.connection-form .settings-actions{grid-column:1/-1}.wireframe-setup-grid{grid-template-columns:minmax(0,1fr)}}
