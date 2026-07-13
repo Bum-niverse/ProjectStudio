@@ -7,16 +7,17 @@ export type SystemEdgeType="http"|"ipc"|"database_query"|"event"|"file"|"depende
 export type SystemDesignSource="user"|"development_mode"|"codex";
 export type SystemDesignViewType="structural"|"runtime"|"deployment"|"development";
 export type ArchitecturePattern="auto"|"layered"|"hub_spoke"|"pipeline"|"event_driven"|"deployment";
+export type C4Level="context"|"container"|"component"|"code";
 
 export interface SystemDesignNode{
   id:string;type:SystemNodeType;name:string;description:string;technology:string;deployment:string;status:SystemNodeStatus;
   linkedFeatureIds:string[];linkedUserFlowIds:string[];linkedWireframeIds:string[];codePaths:string[];testPaths:string[];configuration:string;
-  position:{x:number;y:number};size:{width:number;height:number};
+  c4Level?:C4Level;parentId?:string;position:{x:number;y:number};size:{width:number;height:number};
 }
 export interface SystemDesignEdge{
-  id:string;source:string;target:string;type:SystemEdgeType;protocol:string;dataFormat:string;isAsync:boolean;authentication:string;errorHandling:string;description:string;
+  id:string;source:string;target:string;type:SystemEdgeType;protocol:string;dataFormat:string;isAsync:boolean;sequence?:number;authentication:string;errorHandling:string;description:string;
 }
-export interface SystemDesignSnapshot{schemaVersion:1;title:string;summary:string;viewType?:SystemDesignViewType;architecturePattern?:ArchitecturePattern;nodes:SystemDesignNode[];edges:SystemDesignEdge[];}
+export interface SystemDesignSnapshot{schemaVersion:1;title:string;summary:string;viewType?:SystemDesignViewType;architecturePattern?:ArchitecturePattern;activeC4Level?:C4Level;nodes:SystemDesignNode[];edges:SystemDesignEdge[];}
 export interface SystemDesignRevision{id:string;designId:string;projectId:string;revisionNumber:number;snapshot:SystemDesignSnapshot;source:SystemDesignSource;createdAt:string;}
 export interface SystemDesignProposal{id:string;projectId:string;designId:string;baseRevisionId:string;proposedSnapshot:SystemDesignSnapshot;summary:string;source:"codex";status:"pending"|"accepted"|"rejected";createdAt:string;decidedAt?:string;rejectionReason?:string;}
 export interface SystemDesignWorkspace{designId:string;projectId:string;revision:SystemDesignRevision;proposals:SystemDesignProposal[];}
@@ -51,6 +52,11 @@ export const ARCHITECTURE_PATTERNS:Array<{id:ArchitecturePattern;label:string;de
   {id:"event_driven",label:"이벤트형",description:"큐·브로커를 중심으로 생산자와 소비자 분리"},
   {id:"deployment",label:"배포형",description:"실행·배포 위치별 경계를 우선 표시"},
 ];
+export const C4_LEVELS:Array<{id:C4Level;label:string;description:string}>=[
+  {id:"context",label:"Context",description:"사용자와 외부 시스템을 포함한 전체 경계"},{id:"container",label:"Container",description:"실행·배포 가능한 애플리케이션과 저장소"},{id:"component",label:"Component",description:"컨테이너 내부의 주요 책임 단위"},{id:"code",label:"Code",description:"구현 파일과 테스트 연결"},
+];
+export function inferC4Level(node:SystemDesignNode):C4Level{if(node.c4Level)return node.c4Level;if(node.type==="external"||node.type==="group")return"context";if(node.type==="component")return"component";return"container";}
+export function visibleSystemDesign(snapshot:SystemDesignSnapshot,level:C4Level=snapshot.activeC4Level??"container"){const rank:C4Level[]=["context","container","component","code"];const maximum=rank.indexOf(level);const nodeIds=new Set(snapshot.nodes.filter(node=>rank.indexOf(inferC4Level(node))<=maximum||(level==="context"&&node.type==="client")).map(node=>node.id));const direct=snapshot.edges.filter(edge=>nodeIds.has(edge.source)&&nodeIds.has(edge.target));const pairs=new Set(direct.map(edge=>`${edge.source}:${edge.target}`));const adjacency=new Map<string,SystemDesignEdge[]>();for(const edge of snapshot.edges)adjacency.set(edge.source,[...(adjacency.get(edge.source)??[]),edge]);const derived:SystemDesignEdge[]=[];for(const source of nodeIds){const queue=[...(adjacency.get(source)??[])];const visited=new Set([source]);while(queue.length){const edge=queue.shift()!;if(visited.has(edge.target))continue;visited.add(edge.target);if(nodeIds.has(edge.target)){const key=`${source}:${edge.target}`;if(source!==edge.target&&!pairs.has(key)){pairs.add(key);derived.push({...edge,id:`derived.${source}.${edge.target}`,source,type:"dependency",sequence:undefined,description:"하위 요소를 통한 간접 관계"});}continue;}queue.push(...(adjacency.get(edge.target)??[]));}}return{nodes:snapshot.nodes.filter(node=>nodeIds.has(node.id)),edges:[...direct,...derived]};}
 
 const finite=(value:number)=>Number.isFinite(value)&&Math.abs(value)<=100_000;
 export function validateSystemDesign(snapshot:SystemDesignSnapshot):string[]{
@@ -81,7 +87,7 @@ export function reviewSystemDesign(snapshot:SystemDesignSnapshot):SystemDesignWa
 
 export function createInitialSystemDesign(projectId:string,features:FeatureSpec[],flows:UserFlowNode[]):SystemDesignSnapshot{
   const featureIds=features.filter(feature=>feature.parentId).slice(0,8).map(feature=>feature.id);const flowIds=flows.slice(0,6).map(flow=>flow.id);
-  return {schemaVersion:1,title:"시스템 설계",summary:"기능명세와 사용자 흐름을 실제 구현 컴포넌트로 연결합니다.",viewType:"structural",architecturePattern:"auto",nodes:[
+  return {schemaVersion:1,title:"시스템 설계",summary:"기능명세와 사용자 흐름을 실제 구현 컴포넌트로 연결합니다.",viewType:"structural",architecturePattern:"auto",activeC4Level:"container",nodes:[
     {id:`${projectId}-client`,type:"client",name:"데스크톱 클라이언트",description:"사용자 입력과 시각적 기획 화면을 제공한다.",technology:"React / TypeScript",deployment:"Tauri WebView",status:"active",linkedFeatureIds:featureIds.slice(0,3),linkedUserFlowIds:flowIds.slice(0,2),linkedWireframeIds:[],codePaths:["src"],testPaths:["src/**/*.test.ts"],configuration:"",position:{x:80,y:220},size:{width:220,height:120}},
     {id:`${projectId}-service`,type:"service",name:"로컬 애플리케이션 서비스",description:"문서 리비전과 시스템 설계를 검증하고 저장한다.",technology:"Rust / Tauri Commands",deployment:"Local process",status:"active",linkedFeatureIds:featureIds.slice(2,7),linkedUserFlowIds:flowIds.slice(2,5),linkedWireframeIds:[],codePaths:["src-tauri/src"],testPaths:["src-tauri/src"],configuration:"",position:{x:430,y:220},size:{width:240,height:120}},
     {id:`${projectId}-database`,type:"database",name:"로컬 SQLite",description:"프로젝트, 문서와 불변 리비전을 저장한다.",technology:"SQLite / SQLx",deployment:"Windows app data",status:"active",linkedFeatureIds:featureIds.slice(4),linkedUserFlowIds:[],linkedWireframeIds:[],codePaths:["src-tauri/migrations"],testPaths:["src-tauri/src"],configuration:"foreign_keys=true",position:{x:800,y:220},size:{width:220,height:120}},

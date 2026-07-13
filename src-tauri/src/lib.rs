@@ -1,4 +1,5 @@
 mod app_environment;
+mod architecture_drift;
 mod codex_sync;
 mod codex_system_design;
 mod codex_wireframe;
@@ -72,6 +73,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             exit_projectstudio,
             app_environment::get_app_environment,
+            architecture_drift::inspect_architecture_drift,
             project_repository::save_project_with_initial_prd,
             project_repository::list_projects,
             project_repository::save_prd_revision,

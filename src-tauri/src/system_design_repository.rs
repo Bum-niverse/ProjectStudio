@@ -31,6 +31,10 @@ pub struct SystemNode {
     pub code_paths: Vec<String>,
     pub test_paths: Vec<String>,
     pub configuration: String,
+    #[serde(default)]
+    pub c4_level: Option<String>,
+    #[serde(default)]
+    pub parent_id: Option<String>,
     pub position: Point,
     pub size: Size,
 }
@@ -44,6 +48,8 @@ pub struct SystemEdge {
     pub protocol: String,
     pub data_format: String,
     pub is_async: bool,
+    #[serde(default)]
+    pub sequence: Option<u32>,
     pub authentication: String,
     pub error_handling: String,
     pub description: String,
@@ -58,6 +64,8 @@ pub struct SystemSnapshot {
     pub view_type: String,
     #[serde(default = "default_architecture_pattern")]
     pub architecture_pattern: String,
+    #[serde(default = "default_c4_level")]
+    pub active_c4_level: String,
     pub nodes: Vec<SystemNode>,
     pub edges: Vec<SystemEdge>,
 }
@@ -66,6 +74,9 @@ fn default_view_type() -> String {
 }
 fn default_architecture_pattern() -> String {
     "auto".into()
+}
+fn default_c4_level() -> String {
+    "container".into()
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -173,6 +184,10 @@ pub fn validate_snapshot(snapshot: &SystemSnapshot) -> Result<(), String> {
             snapshot.architecture_pattern.as_str(),
             "auto" | "layered" | "hub_spoke" | "pipeline" | "event_driven" | "deployment"
         )
+        || !matches!(
+            snapshot.active_c4_level.as_str(),
+            "context" | "container" | "component" | "code"
+        )
         || snapshot.nodes.len() > 200
         || snapshot.edges.len() > 500
     {
@@ -195,6 +210,13 @@ pub fn validate_snapshot(snapshot: &SystemSnapshot) -> Result<(), String> {
                     | "group"
             )
             || !matches!(node.status.as_str(), "planned" | "active" | "deprecated")
+            || node.c4_level.as_deref().is_some_and(|value| {
+                !matches!(value, "context" | "container" | "component" | "code")
+            })
+            || node
+                .parent_id
+                .as_deref()
+                .is_some_and(|value| value == node.id || !valid_id(value))
             || ![
                 node.position.x,
                 node.position.y,
@@ -208,6 +230,18 @@ pub fn validate_snapshot(snapshot: &SystemSnapshot) -> Result<(), String> {
         {
             return Err(format!(
                 "시스템 설계 노드 '{}' 형식이 올바르지 않습니다.",
+                node.id
+            ));
+        }
+    }
+    for node in &snapshot.nodes {
+        if node
+            .parent_id
+            .as_ref()
+            .is_some_and(|parent_id| !nodes.contains(parent_id))
+        {
+            return Err(format!(
+                "시스템 설계 노드 '{}'의 상위 경계를 찾을 수 없습니다.",
                 node.id
             ));
         }
@@ -455,6 +489,7 @@ mod tests {
             summary: "".into(),
             view_type: "structural".into(),
             architecture_pattern: "auto".into(),
+            active_c4_level: "container".into(),
             nodes: vec![SystemNode {
                 id: "a".into(),
                 r#type: "service".into(),
@@ -469,6 +504,8 @@ mod tests {
                 code_paths: vec![],
                 test_paths: vec![],
                 configuration: "".into(),
+                c4_level: None,
+                parent_id: None,
                 position: Point { x: 0.0, y: 0.0 },
                 size: Size {
                     width: 100.0,
@@ -490,6 +527,7 @@ mod tests {
             protocol: "".into(),
             data_format: "".into(),
             is_async: false,
+            sequence: None,
             authentication: "".into(),
             error_handling: "".into(),
             description: "".into(),
@@ -502,6 +540,7 @@ mod tests {
         let value: SystemSnapshot = serde_json::from_str(legacy).expect("legacy snapshot");
         assert_eq!(value.view_type, "structural");
         assert_eq!(value.architecture_pattern, "auto");
+        assert_eq!(value.active_c4_level, "container");
         assert!(validate_snapshot(&value).is_ok());
     }
 }
