@@ -31,7 +31,7 @@ pnpm tauri build
 현재 베타 설치 파일에는 유료 코드 서명 인증서를 적용하지 않는다. 따라서 Windows SmartScreen이 `알 수 없는 게시자` 경고를 표시할 수 있다. 파일의 커밋, 버전과 SHA-256 체크섬을 함께 전달하고 신뢰할 수 있는 지인에게만 공유한다.
 
 ```powershell
-Get-FileHash .\ProjectStudio_0.2.0_x64-setup.exe -Algorithm SHA256
+Get-FileHash .\ProjectStudio_0.3.0_x64-setup.exe -Algorithm SHA256
 ```
 
 ## 업데이트
