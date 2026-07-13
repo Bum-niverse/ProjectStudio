@@ -4,6 +4,7 @@
     { "name": "frontend-test", "cmd": ["pnpm", "test"] },
     { "name": "frontend-build", "cmd": ["pnpm", "build"] },
     { "name": "react-flow-css", "cmd": ["python", "scripts/check_react_flow_css.py"] },
+    { "name": "migration-integrity", "cmd": ["python", "scripts/check_migration_integrity.py"] },
     { "name": "rust-format", "cmd": ["cargo", "fmt", "--check", "--manifest-path", "src-tauri/Cargo.toml"] },
     { "name": "rust-test", "cmd": ["cargo", "test", "--manifest-path", "src-tauri/Cargo.toml"] }
   ]
