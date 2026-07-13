@@ -1,6 +1,6 @@
 import type {ArchitecturePattern,SystemDesignNode,SystemDesignSnapshot,SystemDesignViewType} from "./systemDesign";
 
-const NODE_WIDTH=240;const NODE_HEIGHT=128;const COLUMN_GAP=160;const ROW_GAP=112;const ORIGIN={x:100,y:120};
+const NODE_WIDTH=240;const NODE_HEIGHT=128;const COLUMN_GAP=280;const ROW_GAP=132;const ORIGIN={x:100,y:120};
 
 export interface SystemDesignLayoutResult{snapshot:SystemDesignSnapshot;resolvedPattern:Exclude<ArchitecturePattern,"auto">;reason:string;}
 
