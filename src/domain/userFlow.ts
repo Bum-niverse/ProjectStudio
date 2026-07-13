@@ -9,8 +9,8 @@ export interface UserFlowSpec{nodes:UserFlowNode[];edges:UserFlowEdge[];lanes:Us
 
 export function isIncompleteGeneratedFlow(storedNodes:UserFlowNode[],generatedNodes:UserFlowNode[]):boolean{
   if(!storedNodes.length||storedNodes.length>=generatedNodes.length)return false;
-  const generatedTitles=new Set(generatedNodes.map(node=>node.title));
-  return storedNodes.every(node=>generatedTitles.has(node.title));
+  const generatedIds=new Set(generatedNodes.map(node=>node.id));
+  return storedNodes.every(node=>generatedIds.has(node.id));
 }
 
 export function reconcileUserFlowLanes(nodes:UserFlowNode[],generatedLanes:UserFlowLane[]):{nodes:UserFlowNode[];lanes:UserFlowLane[];didRemap:boolean}{

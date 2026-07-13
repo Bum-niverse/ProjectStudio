@@ -32,7 +32,7 @@ describe("createUserFlowSpec",()=>{
   it("기본 단계 일부만 남은 실행 파이프라인을 불완전 상태로 판정한다",()=>{
     const generated=createExecutionPipelineSpec("analysis",[],"data_analysis","eda");
     expect(isIncompleteGeneratedFlow([generated.nodes.find(node=>node.title==="분석 해석")!],generated.nodes)).toBe(true);
-    expect(isIncompleteGeneratedFlow([{...generated.nodes[0],title:"사용자 정의 단계"}],generated.nodes)).toBe(false);
+    expect(isIncompleteGeneratedFlow([{...generated.nodes[0],id:"custom-node",title:"사용자 정의 단계"}],generated.nodes)).toBe(false);
   });
   it("요구사항별 스윔레인과 다단계 노드를 만든다",()=>{
     const projectId="project-flow";const spec=createUserFlowSpec(projectId,createDevelopmentFeatureSpec(projectId));
