@@ -15,6 +15,7 @@ import { LoginPage } from "./LoginPage";
 import { createDevelopmentPrdValues } from "./adapters/developmentPrdGenerator";
 import { applyFont, loadFont, type FontId } from "./font";
 import { SystemDesignPage } from "./SystemDesignPage";
+import { generateAndSavePlanningBundle, type PlanningGenerationResult } from "./application/planningService";
 
 interface GithubUser{id:number;login:string;name?:string;avatarUrl:string;isOwner:boolean}
 
@@ -51,6 +52,7 @@ export default function App() {
   const [authMessage,setAuthMessage]=useState<string>();
   const [isDeveloperMode,setIsDeveloperMode]=useState(()=>localStorage.getItem("projectstudio:developer-mode")==="true");
   const[completionError,setCompletionError]=useState<string>();
+  const [planningState,setPlanningState]=useState<{projectId:string;status:"running"|"success"|"error";result?:PlanningGenerationResult;message:string}>();
 
   const selectedProject = projects.find(({ project }) => project.id === selectedProjectId);
   const activeStageIndex = STAGES.findIndex(stage=>stage.id===page);
@@ -83,12 +85,26 @@ export default function App() {
       setName("");
       setIdea("");
       setPage("prd");
+      generateDetailedPlan(created);
     } catch (error) {
       if (error instanceof ProjectValidationError) setErrors(error.fields);
       else setSaveError("프로젝트를 만들지 못했습니다. 입력 내용은 유지됩니다.");
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function generateDetailedPlan(project: ProjectWithPrd, replaceExisting=false) {
+    setPlanningState({projectId:project.project.id,status:"running",message:"PRD를 Codex CLI에 전달해 기능명세·유저플로우·시스템 설계를 생성하고 있습니다."});
+    void generateAndSavePlanningBundle({projectId:project.project.id,projectName:project.project.name,sourceDocumentId:project.prd.documentId,prdMarkdown:project.prd.contentMarkdown,replaceExisting})
+      .then(result=>setPlanningState({projectId:project.project.id,status:"success",result,message:"Codex 상세 기획을 로컬 작업대에 저장했습니다."}))
+      .catch(error=>setPlanningState({projectId:project.project.id,status:"error",message:`${error instanceof Error?error.message:String(error)} PRD는 저장됐습니다. 하위 산출물 상태를 확인한 뒤 다시 실행할 수 있습니다.`}));
+  }
+
+  function handleRegeneratePlanning() {
+    if(!selectedProject||planningState?.status==="running")return;
+    if(!window.confirm("기존 기능명세와 유저플로우를 Codex 생성 결과로 교체합니다. 시스템 설계는 새 리비전으로 보존됩니다. 계속할까요?"))return;
+    generateDetailedPlan(selectedProject,true);
   }
 
   function handleOpenProject(projectId: string) {
@@ -171,6 +187,7 @@ export default function App() {
             <span className="revision-badge">REV {selectedProject.prd.revisionNumber}</span>
           </div>
           <PrdEditor key={selectedProject.prd.id} revision={selectedProject.prd} fallbackValues={createDevelopmentPrdValues(selectedProject.project.name,selectedProject.project.idea)} onSave={handleSavePrd} />
+          <section className={`planning-generation-status ${planningState?.projectId===selectedProject.project.id?planningState.status:"idle"}`} aria-live="polite"><div><strong>{planningState?.projectId!==selectedProject.project.id?"Codex 상세 산출물":planningState.status==="running"?"Codex 상세 기획 생성 중":planningState.status==="success"?"상세 산출물 생성 완료":"상세 산출물 생성 실패"}</strong><p>{planningState?.projectId===selectedProject.project.id?planningState.message:"현재 PRD를 분석해 기능명세·유저플로우·시스템 설계를 프로젝트별로 상세 생성합니다."}</p>{planningState?.projectId===selectedProject.project.id&&planningState.result&&<small>기능 {planningState.result.featureCount}개 · 수용 기준 {planningState.result.criterionCount}개 · 유저플로우 {planningState.result.flowNodeCount}노드/{planningState.result.flowEdgeCount}연결 · 시스템 설계 {planningState.result.designNodeCount}노드/{planningState.result.designEdgeCount}연결</small>}</div><div className="planning-generation-actions"><span>{planningState?.projectId===selectedProject.project.id&&planningState.status==="running"?"현재 PRD 내용이 로컬 Codex CLI로 전달됩니다.":"기존 하위 산출물 교체 전 확인을 요청합니다."}</span><button disabled={planningState?.projectId===selectedProject.project.id&&planningState.status==="running"} onClick={handleRegeneratePlanning} type="button">{planningState?.projectId===selectedProject.project.id&&planningState.status==="running"?"생성 중…":"Codex로 상세 산출물 생성"}</button></div></section>
           <div className="page-actions"><button className="secondary" onClick={() => setPage("project")} type="button">이전: 프로젝트</button><button onClick={() => setPage("features")} type="button">다음: 기능명세</button></div>
         </section>
       )}

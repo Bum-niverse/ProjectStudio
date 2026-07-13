@@ -3,8 +3,8 @@ import type { FeatureSpec } from "../domain/feature";
 import type { FeaturePosition, FeatureRepository } from "../ports/featureRepository";
 
 class TauriFeatureRepository implements FeatureRepository {
-  initialize(projectId: string, sourceDocumentId: string, features: FeatureSpec[]) {
-    return invoke<FeatureSpec[]>("initialize_feature_spec", { input: { projectId, sourceDocumentId, features, createdAt: new Date().toISOString() } });
+  initialize(projectId: string, sourceDocumentId: string, features: FeatureSpec[], replaceExisting=false) {
+    return invoke<FeatureSpec[]>("initialize_feature_spec", { input: { projectId, sourceDocumentId, features, replaceExisting, createdAt: new Date().toISOString() } });
   }
   async listPositions(projectId: string) { return (await invoke<Omit<FeaturePosition, "projectId">[]>("list_feature_positions", { projectId })).map((position) => ({ ...position, projectId })); }
   savePosition(position: FeaturePosition) {

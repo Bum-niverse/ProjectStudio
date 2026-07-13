@@ -1,5 +1,6 @@
 mod app_environment;
 mod architecture_drift;
+mod codex_planning;
 mod codex_sync;
 mod codex_system_design;
 mod codex_wireframe;
@@ -96,6 +97,7 @@ pub fn run() {
             codex_sync::sync_project_documents,
             codex_wireframe::generate_wireframes_with_codex,
             codex_system_design::generate_system_design_with_codex,
+            codex_planning::generate_project_plan_with_codex,
             system_design_repository::initialize_system_design,
             system_design_repository::save_system_design_revision,
             system_design_repository::list_system_design_revisions,

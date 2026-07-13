@@ -34,6 +34,8 @@ pub struct InitializeFeatureSpecInput {
     project_id: String,
     source_document_id: String,
     features: Vec<FeatureSpec>,
+    #[serde(default)]
+    replace_existing: bool,
     created_at: String,
 }
 
@@ -118,9 +120,16 @@ pub async fn initialize_feature_spec(
         .fetch_one(&mut *transaction)
         .await
         .map_err(|error| error.to_string())?;
+    if input.replace_existing {
+        sqlx::query("DELETE FROM features WHERE project_id = ?")
+            .bind(&input.project_id)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|error| format!("기존 기능명세를 교체하지 못했습니다: {error}"))?;
+    }
     // 이전 일반 프로젝트용 시드는 ProjectStudio 자체 기능을 복제한 43개 고정 항목이었다.
     // 정확히 그 미편집 시드 형태일 때만 교체해 사용자가 만든 기능명세를 보존한다.
-    if existing_count == 43 && legacy_seed_count == 5 {
+    if !input.replace_existing && existing_count == 43 && legacy_seed_count == 5 {
         sqlx::query("DELETE FROM features WHERE project_id = ?")
             .bind(&input.project_id)
             .execute(&mut *transaction)
