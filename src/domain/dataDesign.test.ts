@@ -28,4 +28,10 @@ describe("data design review", () => {
   it("warns when the data contract is empty", () => {
     expect(reviewDataDesign(initialDataDesign())).toContain("데이터셋 계약이 없습니다. 출처·키·변수와 타깃을 먼저 정의해야 합니다.");
   });
+  it("계획 단계에는 코드 경로를 강제하지 않고 구현 시작 뒤에만 추적한다", () => {
+    const snapshot = createInitialDataDesign("data_analysis", "eda", "지역 분석", "공개 데이터를 분석한다.");
+    const planned = {...createExecutionTasks("data_analysis", "eda", snapshot)[0], codePaths: [], testPaths: [], status: "planned" as const};
+    expect(reviewDataDesign({...snapshot, executionTasks: [planned]}).some(item => item.includes("코드 경로"))).toBe(false);
+    expect(reviewDataDesign({...snapshot, executionTasks: [{...planned, status: "in_progress" as const}]}).some(item => item.includes("코드 경로"))).toBe(true);
+  });
 });

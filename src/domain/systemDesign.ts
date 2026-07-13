@@ -77,7 +77,8 @@ export function reviewSystemDesign(snapshot:SystemDesignSnapshot):SystemDesignWa
   const warnings:SystemDesignWarning[]=[];const ids=new Set(snapshot.nodes.map(node=>node.id));const connected=new Set(snapshot.edges.flatMap(edge=>[edge.source,edge.target]));
   for(const node of snapshot.nodes){
     if(!connected.has(node.id)&&snapshot.nodes.length>1)warnings.push({id:`disconnected-${node.id}`,kind:"disconnected",targetId:node.id,message:`‘${node.name}’ 노드가 다른 컴포넌트와 연결되지 않았습니다.`});
-    if(!node.linkedFeatureIds.length)warnings.push({id:`feature-${node.id}`,kind:"unlinked_feature",targetId:node.id,message:`‘${node.name}’ 노드에 연결된 기능명세가 없습니다.`});
+    const hasPlanningTrace=node.dataMlType?(node.relatedDatasetIds?.length??0)>0||(node.relatedTaskIds?.length??0)>0||node.linkedUserFlowIds.length>0:node.linkedFeatureIds.length>0;
+    if(!hasPlanningTrace)warnings.push({id:`feature-${node.id}`,kind:"unlinked_feature",targetId:node.id,message:node.dataMlType?`‘${node.name}’ 노드에 연결된 데이터셋·실행 작업·분석 단계가 없습니다.`:`‘${node.name}’ 노드에 연결된 기능명세가 없습니다.`});
     if(!node.dataMlType&&node.type==="service"&&/저장|상태|기록|관리/.test(`${node.name} ${node.description}`)&&!snapshot.edges.some(edge=>edge.source===node.id&&["database","cache"].includes(snapshot.nodes.find(item=>item.id===edge.target)?.type??"")))warnings.push({id:`store-${node.id}`,kind:"missing_datastore",targetId:node.id,message:`‘${node.name}’ 서비스는 상태를 다루지만 연결된 저장소가 보이지 않습니다.`});
   }
   for(const edge of snapshot.edges){

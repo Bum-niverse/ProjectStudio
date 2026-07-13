@@ -166,8 +166,9 @@ export function reviewDataDesign(snapshot: DataDesignSnapshot): string[] {
     if (!relation.unmatchedPolicy.trim()) warnings.push("병합 실패 행의 처리 방식이 정해지지 않았습니다.");
   }
   for (const task of snapshot.executionTasks) {
-    if (!task.codePaths.length) warnings.push(`${task.id}: 계획과 연결된 코드 경로가 없습니다.`);
-    if (!task.testPaths.length) warnings.push(`${task.id}: 완료를 검증할 테스트 경로가 없습니다.`);
+    const requiresImplementationLinks = ["in_progress", "validated", "completed", "drift_detected"].includes(task.status);
+    if (requiresImplementationLinks && !task.codePaths.length) warnings.push(`${task.id}: 진행 중인 작업과 연결된 코드 경로가 없습니다.`);
+    if (requiresImplementationLinks && !task.testPaths.length) warnings.push(`${task.id}: 진행 중인 작업을 검증할 테스트 경로가 없습니다.`);
     if (!task.validationCommands.length) warnings.push(`${task.id}: 검증 명령이 없습니다.`);
   }
   return [...new Set(warnings)];

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createDevelopmentFeatureSpec } from "./feature";
-import { createExecutionPipelineSpec, createUserFlowSpec } from "./userFlow";
+import { createExecutionPipelineSpec, createUserFlowSpec, reconcileUserFlowLanes } from "./userFlow";
 
 describe("createUserFlowSpec",()=>{
   it("새 데이터 프로젝트는 ProjectStudio 기능이 아닌 아이디어 기반 흐름을 만든다",()=>{
@@ -21,6 +21,13 @@ describe("createUserFlowSpec",()=>{
     expect(ml.nodes.some(node=>node.title.includes("rolling"))).toBe(true);
     expect(ml.nodes.some(node=>node.title.includes("MASE"))).toBe(true);
     expect(analysis.nodes.some(node=>node.title.includes("효과 크기"))).toBe(true);
+  });
+  it("저장된 분석 레인 ID가 달라도 생성된 스윔레인에 순서대로 복원한다",()=>{
+    const generated=createExecutionPipelineSpec("analysis",[],"data_analysis","eda");
+    const persisted=generated.nodes.map(node=>({...node,laneId:["prepare","quality","analysis","report"][generated.lanes.findIndex(lane=>lane.id===node.laneId)]}));
+    const reconciled=reconcileUserFlowLanes(persisted,generated.lanes);
+    expect(reconciled.didRemap).toBe(true);
+    for(const lane of reconciled.lanes)expect(reconciled.nodes.filter(node=>node.laneId===lane.id).length).toBeGreaterThan(0);
   });
   it("요구사항별 스윔레인과 다단계 노드를 만든다",()=>{
     const projectId="project-flow";const spec=createUserFlowSpec(projectId,createDevelopmentFeatureSpec(projectId));

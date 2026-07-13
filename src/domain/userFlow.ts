@@ -7,6 +7,19 @@ export interface UserFlowEdge{id:string;projectId:string;sourceNodeId:string;tar
 export interface UserFlowLane{id:string;title:string;requirementId?:string;order?:number;positionY:number;height:number;colorKey?:NodeColorKey}
 export interface UserFlowSpec{nodes:UserFlowNode[];edges:UserFlowEdge[];lanes:UserFlowLane[]}
 
+export function reconcileUserFlowLanes(nodes:UserFlowNode[],generatedLanes:UserFlowLane[]):{nodes:UserFlowNode[];lanes:UserFlowLane[];didRemap:boolean}{
+  const persistedLaneIds=[...new Set(nodes.map(node=>node.laneId))];
+  if(!nodes.length)return{nodes,lanes:generatedLanes,didRemap:false};
+  if(persistedLaneIds.length===generatedLanes.length&&persistedLaneIds.every(id=>generatedLanes.some(lane=>lane.id===id)))return{nodes,lanes:generatedLanes,didRemap:false};
+  const orderedPersisted=persistedLaneIds.sort((left,right)=>Math.min(...nodes.filter(node=>node.laneId===left).map(node=>node.positionY))-Math.min(...nodes.filter(node=>node.laneId===right).map(node=>node.positionY)));
+  if(orderedPersisted.length===generatedLanes.length){
+    const laneMap=new Map(orderedPersisted.map((id,index)=>[id,generatedLanes[index].id]));
+    return{nodes:nodes.map(node=>({...node,laneId:laneMap.get(node.laneId)??node.laneId})),lanes:generatedLanes,didRemap:true};
+  }
+  const lanes=orderedPersisted.map((id,index)=>{const laneNodes=nodes.filter(node=>node.laneId===id);const minY=Math.min(...laneNodes.map(node=>node.positionY));const maxY=Math.max(...laneNodes.map(node=>node.positionY));const phase=laneNodes.find(node=>node.kind==="phase");return{id,title:phase?.title??`분석 단계 ${index+1}`,order:index,positionY:Math.max(0,minY-100),height:Math.max(240,maxY-minY+200),colorKey:phase?.colorKey??laneNodes[0]?.colorKey};});
+  return{nodes,lanes,didRemap:false};
+}
+
 export function connectedUserFlowNodeIds(edges:UserFlowEdge[],originId:string,depth=2):Set<string>{
   const visible=new Set([originId]);let frontier=[originId];
   for(let step=0;step<depth&&frontier.length;step++){const next:string[]=[];for(const edge of edges){if(frontier.includes(edge.sourceNodeId)&&!visible.has(edge.targetNodeId)){visible.add(edge.targetNodeId);next.push(edge.targetNodeId);}if(frontier.includes(edge.targetNodeId)&&!visible.has(edge.sourceNodeId)){visible.add(edge.sourceNodeId);next.push(edge.sourceNodeId);}}frontier=next;}
