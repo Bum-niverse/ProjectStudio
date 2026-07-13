@@ -23,4 +23,8 @@ for page in ["src/UserFlowPage.tsx", "src/SystemDesignPage.tsx"]:
     if 'type:"straight"' in source or 'type:"smoothstep"' not in source:
         raise SystemExit(f"{page}의 연결선은 분기 가능한 직교 라우팅을 사용해야 합니다.")
 
+system_page = Path("src/SystemDesignPage.tsx").read_text(encoding="utf-8")
+if "key={canvasViewportKey}" not in system_page or "setCanvasFitRevision(current=>current+1)" not in system_page:
+    raise SystemExit("시스템 설계는 C4 수준·정렬 변경 후 표시 노드에 viewport를 다시 맞춰야 합니다.")
+
 print("React Flow canvas layer check passed.")
