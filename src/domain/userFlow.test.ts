@@ -3,15 +3,23 @@ import { createDevelopmentFeatureSpec } from "./feature";
 import { createUserFlowSpec } from "./userFlow";
 
 describe("createUserFlowSpec",()=>{
+  it("새 데이터 프로젝트는 ProjectStudio 기능이 아닌 아이디어 기반 흐름을 만든다",()=>{
+    const projectId="stock-project";const features=createDevelopmentFeatureSpec(projectId,"주가 방향 예측기","과거 주가 데이터와 이동평균으로 다음 거래일 상승·하락을 분류하고 백테스트한다.");
+    expect(features.some(feature=>feature.title==="데이터 수집과 품질 관리")).toBe(true);
+    expect(features.some(feature=>feature.title==="시간 순서 검증과 백테스트")).toBe(true);
+    expect(features.some(feature=>feature.title==="PRD 생성·편집")).toBe(false);
+    const spec=createUserFlowSpec(projectId,features);
+    expect(spec.lanes.map(lane=>lane.title)).toContain("피처와 예측 대상 생성");
+  });
   it("요구사항별 스윔레인과 다단계 노드를 만든다",()=>{
     const projectId="project-flow";const spec=createUserFlowSpec(projectId,createDevelopmentFeatureSpec(projectId));
-    expect(spec.lanes).toHaveLength(2);
-    expect(spec.nodes.length).toBeGreaterThan(20);
+    expect(spec.lanes).toHaveLength(5);
+    expect(spec.nodes.length).toBeGreaterThanOrEqual(20);
     expect(spec.nodes.some(node=>node.kind==="phase")).toBe(true);
-    expect(spec.nodes.some(node=>node.kind==="decision")).toBe(true);
+    expect(spec.edges.length).toBeGreaterThan(spec.lanes.length);
     expect(spec.nodes.some(node=>node.kind==="result")).toBe(true);
     expect(spec.nodes.some(node=>node.kind==="action"&&node.title.endsWith("실행"))).toBe(true);
-    expect(spec.nodes.every(node=>!node.title.includes("오류 복구")&&!node.title.includes("저장·변경 이력"))).toBe(true);
+    expect(spec.nodes.every(node=>!node.title.includes("저장·변경 이력"))).toBe(true);
     expect(spec.edges.length).toBeGreaterThanOrEqual(spec.nodes.length-spec.lanes.length);
   });
   it("Globeat은 장소 기반 음악 기능군과 흐름을 만든다",()=>{

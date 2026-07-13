@@ -29,7 +29,7 @@ if "key={canvasViewportKey}" not in system_page or "setCanvasFitRevision(current
 
 feature_page = Path("src/FeatureMap.tsx").read_text(encoding="utf-8")
 theme_audit = Path("src/theme-audit.css").read_text(encoding="utf-8")
-if "branch-colors-v2" not in feature_page:
+if "idea-driven-colors-v3" not in feature_page:
     raise SystemExit("기능명세 대주제 색상 마이그레이션 버전이 필요합니다.")
 if "onInit={instance=>requestAnimationFrame(()=>requestAnimationFrame" not in feature_page:
     raise SystemExit("기능명세도 테마·글꼴 계산 후 viewport를 다시 맞춰야 합니다.")

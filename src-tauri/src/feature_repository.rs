@@ -107,6 +107,26 @@ pub async fn initialize_feature_spec(
         .begin()
         .await
         .map_err(|error| error.to_string())?;
+    let existing_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM features WHERE project_id = ?")
+            .bind(&input.project_id)
+            .fetch_one(&mut *transaction)
+            .await
+            .map_err(|error| error.to_string())?;
+    let legacy_seed_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM features WHERE project_id = ? AND title IN ('핵심 제품 경험', '기획 문서', 'PRD 생성·편집', '개발 추적', 'Codex 문서 동기화')")
+        .bind(&input.project_id)
+        .fetch_one(&mut *transaction)
+        .await
+        .map_err(|error| error.to_string())?;
+    // 이전 일반 프로젝트용 시드는 ProjectStudio 자체 기능을 복제한 43개 고정 항목이었다.
+    // 정확히 그 미편집 시드 형태일 때만 교체해 사용자가 만든 기능명세를 보존한다.
+    if existing_count == 43 && legacy_seed_count == 5 {
+        sqlx::query("DELETE FROM features WHERE project_id = ?")
+            .bind(&input.project_id)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|error| format!("이전 기본 기능명세를 교체하지 못했습니다: {error}"))?;
+    }
     for feature in &input.features {
         sqlx::query("INSERT OR IGNORE INTO features (id, project_id, parent_feature_id, source_document_id, title, description, status, priority, role, sort_order, created_at, updated_at, color_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             .bind(&feature.id).bind(&input.project_id).bind(&feature.parent_id)

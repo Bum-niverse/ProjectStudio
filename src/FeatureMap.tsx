@@ -23,8 +23,8 @@ type LayoutDensity = "default" | "compact";
 type FeatureNode = Node<FeatureNodeData>;
 const nodeTypes = { feature: FeatureNodeCard };
 const MAGNET_DISTANCE = 34;
-const FEATURE_NODE_LAYOUT_VERSION="branch-spacing-v4";
-const FEATURE_BRANCH_COLOR_VERSION="branch-colors-v2";
+const FEATURE_NODE_LAYOUT_VERSION="idea-driven-spacing-v5";
+const FEATURE_BRANCH_COLOR_VERSION="idea-driven-colors-v3";
 const BRANCH_COLORS:NodeColorKey[]=["green","cyan","amber","violet","rose","slate"];
 
 function colorFeatureBranches(features:FeatureSpec[]):FeatureSpec[]{const root=features.find(feature=>!feature.parentId);if(!root)return features;const rootId=root.id;const byId=new Map(features.map(feature=>[feature.id,feature]));const branches=features.filter(feature=>feature.parentId===rootId).sort((a,b)=>a.sortOrder-b.sortOrder);const branchColors=new Map(branches.map((branch,index)=>[branch.id,BRANCH_COLORS[index%BRANCH_COLORS.length]]));function resolve(feature:FeatureSpec):NodeColorKey{let current=feature;while(current.parentId&&current.parentId!==rootId){const parent=byId.get(current.parentId);if(!parent)break;current=parent;}return branchColors.get(current.id)??"slate";}return features.map(feature=>({...feature,colorKey:feature.id===rootId?"slate":resolve(feature)}));}
@@ -38,6 +38,7 @@ interface FeatureMapProps {
   projectId: string;
   sourceDocumentId: string;
   projectName?: string;
+  projectIdea?: string;
 }
 
 function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutDensity="default"): FeatureNode[] {
@@ -115,9 +116,9 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutD
   }));
 }
 
-export function FeatureMap({ projectId, sourceDocumentId, projectName }: FeatureMapProps) {
+export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIdea }: FeatureMapProps) {
   const repository = useMemo(() => createFeatureRepository(), []);
-  const generatedFeatures = useMemo(() => createDevelopmentFeatureSpec(projectId, projectName), [projectId, projectName]);
+  const generatedFeatures = useMemo(() => createDevelopmentFeatureSpec(projectId, projectName,projectIdea), [projectId, projectName,projectIdea]);
   const [features, setFeatures] = useState(generatedFeatures);
   const [mode, setMode] = useState<WorkspaceViewMode>("document");
   const [layoutDensity,setLayoutDensity]=useState<LayoutDensity>("default");
