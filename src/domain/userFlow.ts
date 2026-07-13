@@ -6,6 +6,19 @@ export interface UserFlowEdge{id:string;projectId:string;sourceNodeId:string;tar
 export interface UserFlowLane{id:string;title:string;positionY:number;height:number;colorKey?:NodeColorKey}
 export interface UserFlowSpec{nodes:UserFlowNode[];edges:UserFlowEdge[];lanes:UserFlowLane[]}
 
+export function connectedUserFlowNodeIds(edges:UserFlowEdge[],originId:string,depth=2):Set<string>{
+  const visible=new Set([originId]);let frontier=[originId];
+  for(let step=0;step<depth&&frontier.length;step++){
+    const next:string[]=[];
+    for(const edge of edges){
+      if(frontier.includes(edge.sourceNodeId)&&!visible.has(edge.targetNodeId)){visible.add(edge.targetNodeId);next.push(edge.targetNodeId);}
+      if(frontier.includes(edge.targetNodeId)&&!visible.has(edge.sourceNodeId)){visible.add(edge.sourceNodeId);next.push(edge.sourceNodeId);}
+    }
+    frontier=next;
+  }
+  return visible;
+}
+
 const FLOW_COLORS:NodeColorKey[]=["green","cyan","amber","violet","rose","slate"];
 function actionTitle(title:string):string{
   const rules:Array<[RegExp,string]>=[[/Google OAuth/,"Google 동의 후 돌아오기"],[/Instagram|Meta 계정/,"Meta 계정 인증"],[/일반 이메일 회원가입/,"가입 정보 제출"],[/이메일 비밀번호 로그인/,"이메일 자격 증명 제출"],[/인증 콜백/,"세션·프로필 확정"],[/로그인|회원가입/,"로그인 정보 제출"],[/랜딩|서비스 진입/,"서비스 시작 선택"],[/프로필/,"프로필 저장"],[/주변 장소|자동 확인/,"클릭 좌표 주변 장소 확인"],[/장소 검색|좌표 입력/,"장소 선택"],[/지구본/,"지도 탐색"],[/핀 선택/,"플레이리스트 핀 열기"],[/위치 지정/,"이 위치로 지정"],[/제목|설명|커버/,"기본 정보 저장"],[/외부 플레이리스트|링크 가져오기/,"재생목록 URL 붙여넣기·곡 검토"],[/곡과|링크 추가/,"곡 링크 추가"],[/공개 범위|발행/,"플레이리스트 발행"],[/상세|곡 목록/,"상세 화면 열기"],[/Spotify|YouTube/,"외부 앱에서 듣기"],[/필터/,"필터 적용"],[/수정|삭제/,"변경 내용 저장"],[/신고$/,"신고 제출"],[/신고 검토/,"처리 상태 저장"]];
