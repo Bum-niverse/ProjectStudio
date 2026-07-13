@@ -18,4 +18,9 @@ for theme in theme_blocks:
     if start < 0 or "--theme-node:" not in block or "--theme-connector:" not in block:
         raise SystemExit(f"{theme}에 노드·연결선 대비 토큰이 필요합니다.")
 
+for page in ["src/UserFlowPage.tsx", "src/SystemDesignPage.tsx"]:
+    source = Path(page).read_text(encoding="utf-8")
+    if 'type:"straight"' in source or 'type:"smoothstep"' not in source:
+        raise SystemExit(f"{page}의 연결선은 분기 가능한 직교 라우팅을 사용해야 합니다.")
+
 print("React Flow canvas layer check passed.")
