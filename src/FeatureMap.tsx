@@ -23,7 +23,7 @@ type LayoutDensity = "default" | "compact";
 type FeatureNode = Node<FeatureNodeData>;
 const nodeTypes = { feature: FeatureNodeCard };
 const MAGNET_DISTANCE = 34;
-const FEATURE_NODE_LAYOUT_VERSION="branch-sheet-tree-v6";
+const FEATURE_NODE_LAYOUT_VERSION="readable-tree-spacing-v7";
 const FEATURE_BRANCH_COLOR_VERSION="idea-driven-colors-v3";
 const BRANCH_COLORS:NodeColorKey[]=["green","cyan","amber","violet","rose","slate"];
 
@@ -47,7 +47,7 @@ function descendantsOf(features:FeatureSpec[],originId:string):FeatureSpec[]{
   return features.filter(feature=>visible.has(feature.id));
 }
 
-function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutDensity="default",rootOverride?:string): FeatureNode[] {
+export function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutDensity="default",rootOverride?:string): FeatureNode[] {
   const childrenByParent = new Map<string | undefined, FeatureSpec[]>();
   for (const feature of features) {
     const siblings = childrenByParent.get(feature.parentId) ?? [];
@@ -80,10 +80,11 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutD
   if (mode === "tree") {
     let nextLeafRow = 0;
     const placeTreeNode = (feature: FeatureSpec, depth: number): number => {
-      if(feature.parentId===root.id&&nextLeafRow>0)nextLeafRow+=density==="compact"?1.2:1.65;
+      if(feature.parentId===root.id&&nextLeafRow>0)nextLeafRow+=density==="compact"?1:2;
       const children = childrenByParent.get(feature.id) ?? [];
-      const horizontalGap=density==="compact"?285:330;
-      const y = children.length === 0 ? 35 + nextLeafRow++ * (density==="compact"?46:58) : children.map((child) => placeTreeNode(child, depth + 1)).reduce((sum, value) => sum + value, 0) / children.length;
+      const horizontalGap=density==="compact"?330:440;
+      const rowGap=density==="compact"?68:118;
+      const y = children.length === 0 ? 50 + nextLeafRow++ * rowGap : children.map((child) => placeTreeNode(child, depth + 1)).reduce((sum, value) => sum + value, 0) / children.length;
       positions.set(feature.id, { x: 30 + depth * horizontalGap, y });
       return y;
     };
@@ -210,7 +211,7 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIde
     const positions = Object.fromEntries(layout.map((node) => [node.id, node.position]));
     setPositionsByMode((current) => ({ ...current, [mapMode]: positions }));
     void Promise.all(layout.map((node) => repository.savePosition({ projectId, featureId: node.id, viewMode: mapMode, positionX: node.position.x, positionY: node.position.y })))
-      .then(() => setPersistenceMessage(density==="compact"?"좁은 정렬을 저장했습니다.":"기본 정렬을 저장했습니다."))
+      .then(() => setPersistenceMessage(density==="compact"?"노드를 압축한 좁은 정렬을 저장했습니다.":"연결 관계를 펼친 기본 정렬을 저장했습니다."))
       .catch(() => setPersistenceMessage("기본 정렬을 저장하지 못했습니다."));
   }
 

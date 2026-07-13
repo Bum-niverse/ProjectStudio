@@ -287,7 +287,10 @@ fn validate(bundle: &PlanningBundle, project_id: &str) -> Result<(), String> {
         "RLS",
         "SQL",
         "데이터베이스",
+        "URL 안전 검증",
+        "권한 검사",
         "캐시 갱신",
+        "토큰 갱신",
         "토큰 저장",
         "내부 처리",
     ];
@@ -417,7 +420,7 @@ pub async fn generate_project_plan_with_codex(
         serde_json::to_vec_pretty(&schema()).map_err(|e| e.to_string())?,
     )
     .map_err(|e| e.to_string())?;
-    let prompt=format!("ProjectStudio의 PRD를 읽고 기능명세, 유저플로우, 시스템 설계를 하나의 JSON으로 생성하라. 프로젝트별 하드코딩이나 범용 문구 반복 없이 PRD의 실제 도메인, 사용자 역할, 데이터, 권한, 외부 연동, 정상·빈 상태·오류·복구·보안 흐름을 구체적으로 반영하라. 기능명세는 루트 1개 아래 대주제→화면 또는 하위 기능→사용자 동작·결과·검증 규칙의 3~4단계 트리로 30개 이상 만든다. 한 부모에서 대안이나 병렬 기능이 생기면 각각 형제 노드로 분기하고 공통 후속 기능은 별도 자식 또는 다음 대주제로 연결될 수 있게 의미 있는 parentId를 사용한다. 각 기능에는 검증 가능한 수용 기준 2~6개를 작성한다. 구현 상태는 모두 planned로 시작하되 MVP 핵심은 critical/high로 구분하라. 유저플로우는 기능명세를 펼쳐 복사하지 말고 한 명의 사용자가 목표를 이루는 실제 여정만 작성한다. 각 레인은 사용자 역할과 목표가 분명한 시작(phase)→실제 화면(screen)→구체적인 클릭·입력(action)→조건 분기(decision)→사용자가 보는 성공·실패 피드백과 완료(result) 순서를 갖는다. decision은 반드시 성공·실패 또는 대안 경로 두 개 이상으로 뻗고 실패 경로는 입력을 유지한 복구 화면이나 재시도로 돌아가야 한다. 버튼명과 화면명을 구체적으로 쓰고 '실행', '처리' 같은 추상 문구를 단독으로 쓰지 마라. RLS, SQL, 데이터베이스 저장, 토큰 갱신, 캐시, 내부 검증, 변경 이력은 유저플로우 노드가 아니라 기능명세 수용 기준 또는 시스템 설계에 둔다. 모든 유저플로우 laneId는 반드시 기능명세 루트 바로 아래 대주제 기능 ID 중 하나여야 한다. 대주제별 좌→우 흐름, 자연스러운 분기와 합류, 겹치지 않는 좌표를 작성하라. 시스템 설계는 클라이언트·서비스·데이터 저장소·비동기 처리·외부 시스템을 필요한 만큼 분리하고 기술, 배포, 프로토콜, 데이터 형식, 인증, 오류 복구를 명시하라. PRD에서 확정되지 않은 기술은 합리적인 MVP 후보로 제안하되 configuration에 '검토 필요'를 기록하라. 모든 ID는 영문·숫자·점·밑줄·하이픈만 사용하고 프로젝트 ID를 접두사로 사용하라. userFlow의 projectId는 정확히 '{project_id}'여야 한다. linkedFeatureIds와 linkedUserFlowIds에는 이번 JSON에 실제 존재하는 ID만 사용하라. 설명은 한국어로 작성하라. 프로젝트명: {project_name}\n프로젝트 ID: {project_id}\n\nPRD:\n{prd}",project_id=input.project_id,project_name=input.project_name.trim(),prd=input.prd_markdown);
+    let prompt=format!("ProjectStudio의 PRD를 읽고 기능명세, 유저플로우, 시스템 설계를 하나의 JSON으로 생성하라. 프로젝트별 하드코딩이나 범용 문구 반복 없이 PRD의 실제 도메인, 사용자 역할, 데이터, 권한, 외부 연동, 정상·빈 상태·오류·복구·보안 흐름을 구체적으로 반영하라. 기능명세는 루트 1개 아래 대주제→화면 또는 하위 기능→사용자 동작·결과·검증 규칙의 3~4단계 트리로 30개 이상 만든다. 한 부모에서 대안이나 병렬 기능이 생기면 각각 형제 노드로 분기하고 공통 후속 기능은 별도 자식 또는 다음 대주제로 연결될 수 있게 의미 있는 parentId를 사용한다. 각 기능에는 검증 가능한 수용 기준 2~6개를 작성한다. 구현 상태는 모두 planned로 시작하되 MVP 핵심은 critical/high로 구분하라. 유저플로우는 기능명세를 펼쳐 복사하지 말고 한 명의 사용자가 목표를 이루는 실제 화면 이동만 작성한다. 각 레인은 사용자 역할과 목표가 분명한 시작(phase)→현재 화면(screen)→구체적인 클릭·입력(action)→다음 화면 또는 사용자가 보는 완료(result) 순서를 갖는다. 회원가입 방식 선택처럼 사용자가 실제로 선택하거나 화면 결과가 달라질 때만 decision을 만들고, 두 개 이상의 다음 화면으로 가로 분기한다. 오류가 실제 화면에 표시될 때만 오류 안내 화면과 수정·재시도 행동을 넣는다. 버튼명과 화면명을 구체적으로 쓰고 '실행', '처리', '검증' 같은 백그라운드 동작을 사용자 행동으로 쓰지 마라. RLS, SQL, 데이터베이스 저장, URL 안전 검증, 토큰 갱신, 캐시, 내부 권한 검사, 변경 이력은 유저플로우 노드가 아니라 기능명세 수용 기준 또는 시스템 설계에 둔다. 모든 유저플로우 laneId는 반드시 기능명세 루트 바로 아래 대주제 기능 ID 중 하나여야 한다. 대주제별 좌→우 흐름, 자연스러운 분기와 합류, 겹치지 않는 좌표를 작성하라. 시스템 설계는 클라이언트·서비스·데이터 저장소·비동기 처리·외부 시스템을 필요한 만큼 분리하고 기술, 배포, 프로토콜, 데이터 형식, 인증, 오류 복구를 명시하라. PRD에서 확정되지 않은 기술은 합리적인 MVP 후보로 제안하되 configuration에 '검토 필요'를 기록하라. 모든 ID는 영문·숫자·점·밑줄·하이픈만 사용하고 프로젝트 ID를 접두사로 사용하라. userFlow의 projectId는 정확히 '{project_id}'여야 한다. linkedFeatureIds와 linkedUserFlowIds에는 이번 JSON에 실제 존재하는 ID만 사용하라. 설명은 한국어로 작성하라. 프로젝트명: {project_name}\n프로젝트 ID: {project_id}\n\nPRD:\n{prd}",project_id=input.project_id,project_name=input.project_name.trim(),prd=input.prd_markdown);
     let mut child = Command::new(program)
         .args([
             "exec",
