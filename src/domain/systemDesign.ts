@@ -5,6 +5,8 @@ export type SystemNodeType="client"|"service"|"database"|"cache"|"queue"|"extern
 export type SystemNodeStatus="planned"|"active"|"deprecated";
 export type SystemEdgeType="http"|"ipc"|"database_query"|"event"|"file"|"dependency";
 export type SystemDesignSource="user"|"development_mode"|"codex";
+export type SystemDesignViewType="structural"|"runtime"|"deployment"|"development";
+export type ArchitecturePattern="auto"|"layered"|"hub_spoke"|"pipeline"|"event_driven"|"deployment";
 
 export interface SystemDesignNode{
   id:string;type:SystemNodeType;name:string;description:string;technology:string;deployment:string;status:SystemNodeStatus;
@@ -14,7 +16,7 @@ export interface SystemDesignNode{
 export interface SystemDesignEdge{
   id:string;source:string;target:string;type:SystemEdgeType;protocol:string;dataFormat:string;isAsync:boolean;authentication:string;errorHandling:string;description:string;
 }
-export interface SystemDesignSnapshot{schemaVersion:1;title:string;summary:string;nodes:SystemDesignNode[];edges:SystemDesignEdge[];}
+export interface SystemDesignSnapshot{schemaVersion:1;title:string;summary:string;viewType?:SystemDesignViewType;architecturePattern?:ArchitecturePattern;nodes:SystemDesignNode[];edges:SystemDesignEdge[];}
 export interface SystemDesignRevision{id:string;designId:string;projectId:string;revisionNumber:number;snapshot:SystemDesignSnapshot;source:SystemDesignSource;createdAt:string;}
 export interface SystemDesignProposal{id:string;projectId:string;designId:string;baseRevisionId:string;proposedSnapshot:SystemDesignSnapshot;summary:string;source:"codex";status:"pending"|"accepted"|"rejected";createdAt:string;decidedAt?:string;rejectionReason?:string;}
 export interface SystemDesignWorkspace{designId:string;projectId:string;revision:SystemDesignRevision;proposals:SystemDesignProposal[];}
@@ -34,6 +36,20 @@ export const SYSTEM_NODE_TYPES:Array<{id:SystemNodeType;label:string}>=[
 ];
 export const SYSTEM_EDGE_TYPES:Array<{id:SystemEdgeType;label:string}>=[
   {id:"http",label:"HTTP/HTTPS"},{id:"ipc",label:"IPC"},{id:"database_query",label:"Database Query"},{id:"event",label:"Event/Message"},{id:"file",label:"File Access"},{id:"dependency",label:"Generic Dependency"},
+];
+export const SYSTEM_DESIGN_VIEWS:Array<{id:SystemDesignViewType;label:string;description:string}>=[
+  {id:"structural",label:"구조",description:"시스템과 컨테이너의 책임·의존 관계"},
+  {id:"runtime",label:"런타임",description:"요청·이벤트가 실행 중 이동하는 순서"},
+  {id:"deployment",label:"배포",description:"브라우저·프로세스·저장소·외부 인프라 경계"},
+  {id:"development",label:"개발",description:"코드 모듈과 구현·테스트 의존 관계"},
+];
+export const ARCHITECTURE_PATTERNS:Array<{id:ArchitecturePattern;label:string;description:string}>=[
+  {id:"auto",label:"자동 감지",description:"노드 유형과 연결 구조로 가장 가까운 패턴 선택"},
+  {id:"layered",label:"계층형",description:"클라이언트 → 서비스 → 데이터 계층"},
+  {id:"hub_spoke",label:"허브형",description:"중앙 시스템과 여러 외부·하위 시스템"},
+  {id:"pipeline",label:"파이프라인",description:"입력부터 출력까지 이어지는 연쇄 처리"},
+  {id:"event_driven",label:"이벤트형",description:"큐·브로커를 중심으로 생산자와 소비자 분리"},
+  {id:"deployment",label:"배포형",description:"실행·배포 위치별 경계를 우선 표시"},
 ];
 
 const finite=(value:number)=>Number.isFinite(value)&&Math.abs(value)<=100_000;
@@ -65,7 +81,7 @@ export function reviewSystemDesign(snapshot:SystemDesignSnapshot):SystemDesignWa
 
 export function createInitialSystemDesign(projectId:string,features:FeatureSpec[],flows:UserFlowNode[]):SystemDesignSnapshot{
   const featureIds=features.filter(feature=>feature.parentId).slice(0,8).map(feature=>feature.id);const flowIds=flows.slice(0,6).map(flow=>flow.id);
-  return {schemaVersion:1,title:"시스템 설계",summary:"기능명세와 사용자 흐름을 실제 구현 컴포넌트로 연결합니다.",nodes:[
+  return {schemaVersion:1,title:"시스템 설계",summary:"기능명세와 사용자 흐름을 실제 구현 컴포넌트로 연결합니다.",viewType:"structural",architecturePattern:"auto",nodes:[
     {id:`${projectId}-client`,type:"client",name:"데스크톱 클라이언트",description:"사용자 입력과 시각적 기획 화면을 제공한다.",technology:"React / TypeScript",deployment:"Tauri WebView",status:"active",linkedFeatureIds:featureIds.slice(0,3),linkedUserFlowIds:flowIds.slice(0,2),linkedWireframeIds:[],codePaths:["src"],testPaths:["src/**/*.test.ts"],configuration:"",position:{x:80,y:220},size:{width:220,height:120}},
     {id:`${projectId}-service`,type:"service",name:"로컬 애플리케이션 서비스",description:"문서 리비전과 시스템 설계를 검증하고 저장한다.",technology:"Rust / Tauri Commands",deployment:"Local process",status:"active",linkedFeatureIds:featureIds.slice(2,7),linkedUserFlowIds:flowIds.slice(2,5),linkedWireframeIds:[],codePaths:["src-tauri/src"],testPaths:["src-tauri/src"],configuration:"",position:{x:430,y:220},size:{width:240,height:120}},
     {id:`${projectId}-database`,type:"database",name:"로컬 SQLite",description:"프로젝트, 문서와 불변 리비전을 저장한다.",technology:"SQLite / SQLx",deployment:"Windows app data",status:"active",linkedFeatureIds:featureIds.slice(4),linkedUserFlowIds:[],linkedWireframeIds:[],codePaths:["src-tauri/migrations"],testPaths:["src-tauri/src"],configuration:"foreign_keys=true",position:{x:800,y:220},size:{width:220,height:120}},

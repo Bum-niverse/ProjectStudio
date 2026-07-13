@@ -18,6 +18,18 @@
 
 MVP는 방식 B인 전체 캔버스 JSON snapshot을 선택했다. `system_designs`는 현재 리비전을 가리키고, `system_design_revisions`는 각 snapshot을 불변 저장한다. `system_design_proposals`는 AI 제안을 현재 원본과 분리한다.
 
+## 관점과 패턴 기반 자동 배치
+
+시스템 설계 snapshot은 노드와 연결을 단일 원본으로 유지하고 `viewType`과 `architecturePattern`을 함께 저장한다. 기존 snapshot에는 두 필드가 없을 수 있으므로 각각 `structural`, `auto`를 기본값으로 읽는다. 뷰마다 노드를 복제하지 않으며 좌표만 선택한 관점과 정렬 전략에서 다시 계산한다.
+
+- 관점: `structural`, `runtime`, `deployment`, `development`
+- 정렬: `auto`, `layered`, `hub_spoke`, `pipeline`, `event_driven`, `deployment`
+- `auto`는 배포 관점, 메시지 큐·이벤트 연결, 그래프 중심 노드, 분기 수를 순서대로 검사해 가장 가까운 패턴을 선택한다.
+- 재정렬 결과는 편집 상태에만 적용되고 사용자가 `새 리비전 저장`을 선택해야 불변 리비전으로 확정된다.
+- 구조 뷰를 MVP 기준으로 하며 이후 동일 모델에서 런타임 흐름 overlay, 배포 경계와 C4 수준별 view 정의를 확장한다.
+
+자동 생성은 PRD 문장을 곧바로 상자와 선으로 바꾸는 방식이 아니라 설계 동인, 품질 속성, 제약, 주요 시나리오와 트레이드오프를 먼저 식별해야 한다. 생성 결과는 JSON 검증과 연결성 검토를 통과해도 현재 설계를 직접 덮어쓰지 않고 사용자 승인 대기 제안으로 저장한다.
+
 이 방식은 노드 위치 복원, 리비전 비교, AI 제안 격리, JSON 내보내기가 단순하며 기존 ProjectStudio 문서 리비전 원칙과 일치한다. 노드·연결 단위의 대규모 검색이 필요해지면 별도 인덱스 테이블을 추가할 수 있으나 MVP에서는 과도한 정규화를 피한다.
 
 시스템 설계 마이그레이션은 `src-tauri/migrations/0006_system_designs.sql`, 와이어프레임 영속 페이지는 `0007_wireframe_pages.sql`이며 기존 프로젝트 데이터는 수정하지 않고 새 테이블만 추가한다.

@@ -54,8 +54,18 @@ pub struct SystemSnapshot {
     pub schema_version: u32,
     pub title: String,
     pub summary: String,
+    #[serde(default = "default_view_type")]
+    pub view_type: String,
+    #[serde(default = "default_architecture_pattern")]
+    pub architecture_pattern: String,
     pub nodes: Vec<SystemNode>,
     pub edges: Vec<SystemEdge>,
+}
+fn default_view_type() -> String {
+    "structural".into()
+}
+fn default_architecture_pattern() -> String {
+    "auto".into()
 }
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -155,6 +165,14 @@ fn valid_id(value: &str) -> bool {
 pub fn validate_snapshot(snapshot: &SystemSnapshot) -> Result<(), String> {
     if snapshot.schema_version != 1
         || snapshot.title.trim().is_empty()
+        || !matches!(
+            snapshot.view_type.as_str(),
+            "structural" | "runtime" | "deployment" | "development"
+        )
+        || !matches!(
+            snapshot.architecture_pattern.as_str(),
+            "auto" | "layered" | "hub_spoke" | "pipeline" | "event_driven" | "deployment"
+        )
         || snapshot.nodes.len() > 200
         || snapshot.edges.len() > 500
     {
@@ -435,6 +453,8 @@ mod tests {
             schema_version: 1,
             title: "설계".into(),
             summary: "".into(),
+            view_type: "structural".into(),
+            architecture_pattern: "auto".into(),
             nodes: vec![SystemNode {
                 id: "a".into(),
                 r#type: "service".into(),
@@ -475,5 +495,13 @@ mod tests {
             description: "".into(),
         });
         assert!(validate_snapshot(&value).is_err());
+    }
+    #[test]
+    fn reads_legacy_snapshot_with_default_view_and_pattern() {
+        let legacy = r#"{"schemaVersion":1,"title":"legacy","summary":"","nodes":[],"edges":[]}"#;
+        let value: SystemSnapshot = serde_json::from_str(legacy).expect("legacy snapshot");
+        assert_eq!(value.view_type, "structural");
+        assert_eq!(value.architecture_pattern, "auto");
+        assert!(validate_snapshot(&value).is_ok());
     }
 }
