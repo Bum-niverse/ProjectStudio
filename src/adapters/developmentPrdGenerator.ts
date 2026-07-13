@@ -5,9 +5,24 @@ function normalizeIdea(idea:string):string{return idea.trim().replace(/\s+/g," "
 function sentences(idea:string):string[]{return normalizeIdea(idea).split(/(?<=[.!?。])\s+/).map(item=>item.trim()).filter(Boolean);}
 function bullet(items:string[]):string{return items.map(item=>`• ${item.replace(/[.!?。]$/g,"")}`).join("\n");}
 
-function createIdeaDrivenPrdValues(projectName:string,rawIdea:string):PrdBlockValues{
+function createIdeaDrivenPrdValues(projectName:string,rawIdea:string,projectType:import("../domain/project").ProjectType):PrdBlockValues{
   const idea=normalizeIdea(rawIdea);const parts=sentences(idea);const context=`${projectName} ${idea}`.toLowerCase();
-  const isDataProject=/머신러닝|machine learning|예측|분류|회귀|모델|데이터|학습|백테스트|시계열|이동평균|수익률/.test(context);
+  if(projectType==="data_analysis")return{
+    "한 줄 정의":`${projectName}은 원천 데이터의 품질과 변환 계보를 보존하면서 질문에 답하는 재현 가능한 데이터 분석 프로젝트다.`,
+    "제품 목표":`${idea}\n\n첫 버전은 데이터 수집, 스키마 검증, 정제·병합, 분석과 결과 시각화를 하나의 재현 가능한 파이프라인으로 연결한다.`,
+    "배경":"분석 결과는 원천 데이터의 기준 시점, 컬럼 의미, 결측 처리와 병합 방식이 불명확하면 같은 조건에서 재현하거나 신뢰하기 어렵다.",
+    "사용자 문제":bullet(["데이터 출처와 갱신 시점이 불명확하면 결과의 유효 범위를 판단하기 어렵다","병합 키의 중복과 다대다 결합은 행 수와 지표를 조용히 왜곡할 수 있다","결측·중복·이상치 처리 근거가 없으면 같은 결과를 재현하기 어렵다"]),
+    "해결 방안":bullet(["원천 데이터를 변경하지 않고 출처·기준 시점·버전을 기록한다","필수 컬럼·타입·단위와 허용 범위를 검사한다","병합 전후 행 수와 키 유일성·카디널리티를 검증한다","정제된 데이터에서 분석 지표와 시각화를 만들고 입력 버전과 실행 조건을 결과에 연결한다"]),
+    "차별점":"차트 생성보다 데이터 계약과 변환 근거를 먼저 기록하며, raw·processed·derived 산출물을 분리해 분석 결과의 재현성을 유지한다.",
+    "타겟 사용자":bullet(["반복 가능한 분석 보고서를 만드는 데이터 분석가","원천 데이터부터 결과까지 품질 근거를 검토하는 프로젝트 소유자","지표 정의와 결과 해석을 확인하는 의사결정자"]),
+    "사용자 시나리오":"분석 정의 → 원천 데이터 수집 → 스키마·품질 검사 → 정제·병합 → 지표 계산 → 시각화·보고서 생성 → 결과와 데이터 계보 검토",
+    "핵심 지표":bullet(["필수 스키마와 품질 검사를 통과한 데이터 비율","예상 카디널리티와 실제 병합 행 수 일치율","동일 입력·설정 재실행 결과 일치율","결과별 원천 데이터와 변환 단계 추적 가능 비율"]),
+    "완료 기준":bullet(["원천 데이터에서 최종 결과까지 대표 분석을 실행한다","결측·중복·이상치와 병합 전후 행 수를 자동 검증한다","지표 정의·단위·기준 시점을 결과와 함께 표시한다","입력 버전과 실행 설정으로 결과를 다시 생성한다"]),
+    "리스크":bullet(["출처별 스키마·인코딩·시간대·단위 불일치","다대다 병합으로 인한 중복 행과 지표 왜곡","결측·이상치 처리에 따른 선택 편향","개인정보가 중간 산출물이나 내보내기에 남을 위험"]),
+    "제외 범위":"MVP에서는 실시간 대규모 스트리밍, 자동 의사결정, 출처가 불명확한 데이터 수집과 결과를 원인 관계로 단정하는 해석을 제외한다.",
+    "카테고리":"데이터 분석 · 품질 검증 · 시각화 · 재현성","사용자 역할":"데이터 분석가 · 검토자 · 프로젝트 소유자","기기":"로컬 분석 환경 · 데스크톱 결과 조회",
+  };
+  const isDataProject=projectType==="machine_learning"||(projectType==="auto"&&/머신러닝|machine learning|예측|분류|회귀|모델|데이터|학습|백테스트|시계열|이동평균|수익률/.test(context));
   if(isDataProject)return{
     "한 줄 정의":`${projectName}은 입력 시점까지의 데이터를 사용해 예측 대상을 분류하고, 기준선과의 비교로 실제 유효성과 한계를 검증하는 데이터·머신러닝 프로젝트다.`,
     "제품 목표":`${idea}\n\n첫 버전은 데이터 수집부터 피처 생성, 모델 학습, 시간 순서 검증과 결과 해석까지 하나의 재현 가능한 파이프라인으로 연결한다. 높은 수치 하나를 만드는 것보다 미래 정보 누수 없이 단순 기준선보다 나은지 정직하게 판단하는 것을 우선한다.`,
@@ -41,8 +56,8 @@ function createIdeaDrivenPrdValues(projectName:string,rawIdea:string):PrdBlockVa
   };
 }
 
-export function createDevelopmentPrdValues(projectName:string,idea:string):PrdBlockValues{
-  if(projectName.trim().toLowerCase()!=="globeat")return createIdeaDrivenPrdValues(projectName.trim()||"새 프로젝트",idea);
+export function createDevelopmentPrdValues(projectName:string,idea:string,projectType:import("../domain/project").ProjectType="auto"):PrdBlockValues{
+  if(projectName.trim().toLowerCase()!=="globeat")return createIdeaDrivenPrdValues(projectName.trim()||"새 프로젝트",idea,projectType);
   return{
   "한 줄 정의":"Globeat은 세계의 실제 장소에 사람들이 만든 플레이리스트를 꽂아 발견하고 공유하는 음악 지도다.",
   "제품 목표":"장소 → 사람의 이야기 → 플레이리스트 → 외부 음악 앱 재생을 하나의 흐름으로 연결한다. 음원을 직접 소유하지 않고 장소, 큐레이션, 설명, 커버와 반응 데이터를 핵심 자산으로 만든다.",
@@ -61,8 +76,8 @@ export function createDevelopmentPrdValues(projectName:string,idea:string):PrdBl
 
 export class DevelopmentPrdGenerator implements PrdGenerator{
   readonly mode="development" as const;
-  async generateDraft({projectName,idea}:PrdDraftInput):Promise<string>{
-    const values=createDevelopmentPrdValues(projectName,idea);
+  async generateDraft({projectName,idea,projectType}:PrdDraftInput):Promise<string>{
+    const values=createDevelopmentPrdValues(projectName,idea,projectType);
     return serializePrdMarkdown(`${projectName} PRD`,values);
   }
 }

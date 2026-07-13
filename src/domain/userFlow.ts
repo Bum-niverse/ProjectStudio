@@ -1,4 +1,5 @@
 import type { FeatureSpec, NodeColorKey } from "./feature";
+import type { ProjectType } from "./project";
 
 export type UserFlowNodeKind="phase"|"screen"|"action"|"result"|"decision";
 export interface UserFlowNode{id:string;projectId:string;laneId:string;title:string;description:string;kind:UserFlowNodeKind;positionX:number;positionY:number;colorKey?:NodeColorKey;depth?:number;parentId?:string;linkedFeatureIds?:string[];branchCondition?:string}
@@ -58,4 +59,11 @@ export function createUserFlowSpec(projectId:string,features:FeatureSpec[]):User
     const terminalIds=nodes.filter(node=>node.laneId===requirement.id&&!edges.some(edge=>edge.sourceNodeId===node.id)).map(node=>node.id);if(!terminalIds.some(id=>nodes.find(node=>node.id===id)?.kind==="result")){const depth=Math.max(...nodes.filter(node=>node.laneId===requirement.id).map(node=>node.depth??0))+1;const id=`flow-${requirement.id}-complete`;nodes.push({id,projectId,laneId:requirement.id,title:`${requirement.title} 완료 화면`,description:"사용자가 완료 결과와 다음 행동을 확인한다.",kind:"result",positionX:90+depth*260,positionY:centerY,colorKey,depth,linkedFeatureIds:[requirement.id]});terminalIds.forEach(sourceNodeId=>edges.push({id:`edge-${sourceNodeId}-${id}`,projectId,sourceNodeId,targetNodeId:id}));}
     laneY+=height+24;
   });return{nodes,edges,lanes};
+}
+
+export function createExecutionPipelineSpec(projectId:string,features:FeatureSpec[],projectType:ProjectType):UserFlowSpec{
+  const root=features.find(feature=>!feature.parentId);const stages=features.filter(feature=>feature.parentId===root?.id).sort((a,b)=>a.sortOrder-b.sortOrder);const nodes:UserFlowNode[]=[];const edges:UserFlowEdge[]=[];const lanes:UserFlowLane[]=[];let laneY=0;
+  stages.forEach((stage,laneIndex)=>{const colorKey=FLOW_COLORS[laneIndex%FLOW_COLORS.length];const children=features.filter(feature=>feature.parentId===stage.id).sort((a,b)=>a.sortOrder-b.sortOrder).slice(0,8);const height=260;lanes.push({id:stage.id,title:stage.title,requirementId:stage.id,order:laneIndex,positionY:laneY,height,colorKey});const sequence=[stage,...children];sequence.forEach((feature,index)=>{const id=`pipeline-${feature.id}`;const isLast=index===sequence.length-1;nodes.push({id,projectId,laneId:stage.id,title:feature.title,description:feature.description,kind:index===0?"phase":isLast?"result":"action",positionX:90+index*280,positionY:laneY+height/2,colorKey,depth:index,parentId:index?`pipeline-${sequence[index-1].id}`:undefined,linkedFeatureIds:[feature.id]});if(index)edges.push({id:`edge-pipeline-${sequence[index-1].id}-${feature.id}`,projectId,sourceNodeId:`pipeline-${sequence[index-1].id}`,targetNodeId:id});});laneY+=height+24;});
+  if(!stages.length){const label=projectType==="machine_learning"?"모델 실험":projectType==="data_analysis"?"분석 실행":"프로그램 실행";lanes.push({id:"execution",title:label,order:0,positionY:0,height:260,colorKey:"slate"});nodes.push({id:`pipeline-${projectId}-start`,projectId,laneId:"execution",title:`${label} 시작`,description:"입력과 실행 조건을 확인한다.",kind:"phase",positionX:90,positionY:130,colorKey:"slate",depth:0});}
+  return{nodes,edges,lanes};
 }

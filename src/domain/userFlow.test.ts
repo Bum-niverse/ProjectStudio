@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createDevelopmentFeatureSpec } from "./feature";
-import { createUserFlowSpec } from "./userFlow";
+import { createExecutionPipelineSpec, createUserFlowSpec } from "./userFlow";
 
 describe("createUserFlowSpec",()=>{
   it("새 데이터 프로젝트는 ProjectStudio 기능이 아닌 아이디어 기반 흐름을 만든다",()=>{
@@ -8,8 +8,11 @@ describe("createUserFlowSpec",()=>{
     expect(features.some(feature=>feature.title==="데이터 수집과 품질 관리")).toBe(true);
     expect(features.some(feature=>feature.title==="시간 순서 검증과 백테스트")).toBe(true);
     expect(features.some(feature=>feature.title==="PRD 생성·편집")).toBe(false);
-    const spec=createUserFlowSpec(projectId,features);
+    const spec=createExecutionPipelineSpec(projectId,features,"machine_learning");
     expect(spec.lanes.map(lane=>lane.title)).toContain("피처와 예측 대상 생성");
+    expect(spec.nodes.some(node=>node.kind==="screen")).toBe(false);
+    expect(spec.nodes.some(node=>node.kind==="phase")).toBe(true);
+    expect(spec.nodes.some(node=>node.kind==="result")).toBe(true);
   });
   it("요구사항별 스윔레인과 다단계 노드를 만든다",()=>{
     const projectId="project-flow";const spec=createUserFlowSpec(projectId,createDevelopmentFeatureSpec(projectId));

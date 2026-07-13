@@ -3,6 +3,7 @@ import { createFeatureRepository } from "../adapters/featureRepository";
 import { createSystemDesignRepository } from "../adapters/systemDesignRepository";
 import { createUserFlowRepository } from "../adapters/userFlowRepository";
 import type { FeatureSpec } from "../domain/feature";
+import type { ProjectType } from "../domain/project";
 import { inspectPlanningQuality, type PlanningQualityReport } from "../domain/planningQuality";
 import type { SystemDesignSnapshot } from "../domain/systemDesign";
 import { validateSystemDesign } from "../domain/systemDesign";
@@ -27,6 +28,7 @@ export interface PlanningGenerationResult {
 export async function generateAndSavePlanningBundle(input: {
   projectId: string;
   projectName: string;
+  projectType: ProjectType;
   sourceDocumentId: string;
   prdMarkdown: string;
   replaceExisting?: boolean;
@@ -35,7 +37,7 @@ export async function generateAndSavePlanningBundle(input: {
   const bundle = await invoke<PlanningBundle>("generate_project_plan_with_codex", { input });
   const designErrors = validateSystemDesign(bundle.systemDesign);
   if (designErrors.length) throw new Error(designErrors[0]);
-  const quality = inspectPlanningQuality({ prdMarkdown: input.prdMarkdown, ...bundle });
+  const quality = inspectPlanningQuality({ projectType: input.projectType, prdMarkdown: input.prdMarkdown, ...bundle });
 
   const features = await createFeatureRepository().initialize(input.projectId, input.sourceDocumentId, bundle.features, input.replaceExisting);
   const userFlow = await createUserFlowRepository().initialize(input.projectId, bundle.userFlow.nodes, bundle.userFlow.edges, input.replaceExisting);

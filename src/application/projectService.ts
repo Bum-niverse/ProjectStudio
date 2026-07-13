@@ -31,18 +31,21 @@ export class ProjectService {
 
     if (!name) fields.name = "프로젝트 이름을 입력해 주세요.";
     if (!idea) fields.idea = "아이디어를 입력해 주세요.";
+    if (input.projectType === "auto") fields.projectType = "새 프로젝트의 유형을 선택해 주세요.";
     if (Object.keys(fields).length > 0) throw new ProjectValidationError(fields);
 
     const createdAt = this.now();
     const prdMarkdown = await this.dependencies.prdGenerator.generateDraft({
       projectName: name,
       idea,
+      projectType: input.projectType,
     });
 
     return this.dependencies.repository.saveProjectWithInitialPrd({
       projectId: this.createId(),
       projectName: name,
       idea,
+      projectType: input.projectType,
       documentId: this.createId(),
       revisionId: this.createId(),
       prdTitle: `${name} PRD`,

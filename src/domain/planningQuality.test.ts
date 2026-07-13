@@ -40,7 +40,7 @@ describe("planning quality", () => {
     const artifacts = createArtifacts("웹 앱 사용자가 로그인한다.");
     artifacts.userFlow.nodes[1].title = "데이터베이스 저장";
     const report = inspectPlanningQuality(artifacts);
-    expect(report.projectType).toBe("app");
+    expect(report.projectType).toBe("web");
     expect(report.gate).toBe("blocked");
     expect(report.findings.map(item => item.id)).toContain("flow-internals");
   });

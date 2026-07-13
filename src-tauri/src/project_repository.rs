@@ -11,6 +11,7 @@ pub struct SaveProjectWithPrdInput {
     project_id: String,
     project_name: String,
     idea: String,
+    project_type: String,
     document_id: String,
     revision_id: String,
     prd_title: String,
@@ -24,6 +25,7 @@ pub struct Project {
     id: String,
     name: String,
     idea: String,
+    project_type: String,
     created_at: String,
     updated_at: String,
 }
@@ -97,11 +99,12 @@ async fn save_project_with_initial_prd_in_connection(
         .map_err(|error| format!("저장 트랜잭션을 시작하지 못했습니다: {error}"))?;
 
     sqlx::query(
-        "INSERT INTO projects (id, name, idea, git_repository_path, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?)",
+        "INSERT INTO projects (id, name, idea, project_type, git_repository_path, created_at, updated_at) VALUES (?, ?, ?, ?, NULL, ?, ?)",
     )
     .bind(&input.project_id)
     .bind(&input.project_name)
     .bind(&input.idea)
+    .bind(&input.project_type)
     .bind(&input.created_at)
     .bind(&input.created_at)
     .execute(&mut *transaction)
@@ -148,6 +151,7 @@ async fn save_project_with_initial_prd_in_connection(
             id: input.project_id,
             name: input.project_name,
             idea: input.idea,
+            project_type: input.project_type,
             created_at: input.created_at.clone(),
             updated_at: input.created_at.clone(),
         },
@@ -172,7 +176,7 @@ async fn list_projects_in_connection(
     connection: &mut SqliteConnection,
 ) -> Result<Vec<ProjectWithPrd>, String> {
     let rows = sqlx::query(
-        "SELECT p.id AS project_id, p.name, p.idea, p.created_at AS project_created_at, p.updated_at, r.id AS revision_id, r.document_id, r.revision_number, r.content_markdown, r.source, r.created_at AS revision_created_at FROM projects p JOIN documents d ON d.project_id = p.id AND d.document_type = 'prd' JOIN document_revisions r ON r.id = d.current_revision_id ORDER BY p.updated_at DESC",
+        "SELECT p.id AS project_id, p.name, p.idea, p.project_type, p.created_at AS project_created_at, p.updated_at, r.id AS revision_id, r.document_id, r.revision_number, r.content_markdown, r.source, r.created_at AS revision_created_at FROM projects p JOIN documents d ON d.project_id = p.id AND d.document_type = 'prd' JOIN document_revisions r ON r.id = d.current_revision_id ORDER BY p.updated_at DESC",
     )
     .fetch_all(connection)
     .await
@@ -185,6 +189,7 @@ async fn list_projects_in_connection(
                     id: row.try_get("project_id").map_err(database_read_error)?,
                     name: row.try_get("name").map_err(database_read_error)?,
                     idea: row.try_get("idea").map_err(database_read_error)?,
+                    project_type: row.try_get("project_type").map_err(database_read_error)?,
                     created_at: row
                         .try_get("project_created_at")
                         .map_err(database_read_error)?,
@@ -299,6 +304,10 @@ mod tests {
                 .execute(&mut connection)
                 .await
                 .expect("운영 마이그레이션 적용에 실패했습니다.");
+            sqlx::raw_sql(include_str!("../migrations/0009_project_types.sql"))
+                .execute(&mut connection)
+                .await
+                .expect("프로젝트 유형 마이그레이션 적용에 실패했습니다.");
 
             let saved = save_project_with_initial_prd_in_connection(
                 &mut connection,
@@ -306,6 +315,7 @@ mod tests {
                     project_id: "project-1".to_owned(),
                     project_name: "Globeat".to_owned(),
                     idea: "음악으로 도시를 탐색한다.".to_owned(),
+                    project_type: "web".to_owned(),
                     document_id: "document-1".to_owned(),
                     revision_id: "revision-1".to_owned(),
                     prd_title: "Globeat PRD".to_owned(),
@@ -339,11 +349,16 @@ mod tests {
                 .execute(&mut connection)
                 .await
                 .expect("운영 마이그레이션 적용에 실패했습니다.");
+            sqlx::raw_sql(include_str!("../migrations/0009_project_types.sql"))
+                .execute(&mut connection)
+                .await
+                .expect("프로젝트 유형 마이그레이션 적용에 실패했습니다.");
 
             let input = SaveProjectWithPrdInput {
                 project_id: "project-1".to_owned(),
                 project_name: "Globeat".to_owned(),
                 idea: "음악으로 도시를 탐색한다.".to_owned(),
+                project_type: "web".to_owned(),
                 document_id: "document-1".to_owned(),
                 revision_id: "revision-1".to_owned(),
                 prd_title: "Globeat PRD".to_owned(),
@@ -358,6 +373,7 @@ mod tests {
                 project_id: "project-2".to_owned(),
                 project_name: "Second".to_owned(),
                 idea: "두 번째 아이디어".to_owned(),
+                project_type: "desktop".to_owned(),
                 document_id: "document-1".to_owned(),
                 revision_id: "revision-2".to_owned(),
                 prd_title: "Second PRD".to_owned(),
@@ -389,12 +405,17 @@ mod tests {
                 .execute(&mut connection)
                 .await
                 .expect("운영 마이그레이션 적용에 실패했습니다.");
+            sqlx::raw_sql(include_str!("../migrations/0009_project_types.sql"))
+                .execute(&mut connection)
+                .await
+                .expect("프로젝트 유형 마이그레이션 적용에 실패했습니다.");
             save_project_with_initial_prd_in_connection(
                 &mut connection,
                 SaveProjectWithPrdInput {
                     project_id: "project-1".to_owned(),
                     project_name: "Globeat".to_owned(),
                     idea: "음악으로 도시를 탐색한다.".to_owned(),
+                    project_type: "web".to_owned(),
                     document_id: "document-1".to_owned(),
                     revision_id: "revision-1".to_owned(),
                     prd_title: "Globeat PRD".to_owned(),

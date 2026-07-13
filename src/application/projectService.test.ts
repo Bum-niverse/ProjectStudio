@@ -24,6 +24,7 @@ describe("ProjectService", () => {
     const created = await service.createProject({
       name: " Globeat ",
       idea: " 음악으로 도시를 탐색한다. ",
+      projectType: "web",
     });
     const reopened = await repository.listProjects();
 
@@ -31,6 +32,7 @@ describe("ProjectService", () => {
       id: "project-1",
       name: "Globeat",
       idea: "음악으로 도시를 탐색한다.",
+      projectType: "web",
     });
     expect(created.prd.contentMarkdown).toContain("# Globeat PRD");
     expect(created.prd.source).toBe("development_mode");
@@ -40,7 +42,7 @@ describe("ProjectService", () => {
   it("빈 이름과 아이디어를 필드 오류로 거절한다", async () => {
     const { service } = createService();
 
-    await expect(service.createProject({ name: " ", idea: "" })).rejects.toMatchObject({
+    await expect(service.createProject({ name: " ", idea: "", projectType: "auto" })).rejects.toMatchObject({
       name: "ProjectValidationError",
       fields: {
         name: "프로젝트 이름을 입력해 주세요.",
@@ -51,7 +53,7 @@ describe("ProjectService", () => {
 
   it("편집한 PRD를 새 사용자 리비전으로 저장한다", async () => {
     const { service } = createService();
-    const created = await service.createProject({ name: "Globeat", idea: "도시 음악 탐색" });
+    const created = await service.createProject({ name: "Globeat", idea: "도시 음악 탐색", projectType: "web" });
 
     const revision = await service.savePrdRevision(created.prd, "  # 수정한 PRD  ");
 

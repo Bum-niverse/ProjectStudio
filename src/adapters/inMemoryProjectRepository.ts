@@ -10,6 +10,7 @@ export class InMemoryProjectRepository implements ProjectRepository {
         id: input.projectId,
         name: input.projectName,
         idea: input.idea,
+        projectType: input.projectType,
         createdAt: input.createdAt,
         updatedAt: input.createdAt,
       },

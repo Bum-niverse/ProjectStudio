@@ -16,6 +16,7 @@ use tauri::{AppHandle, Manager};
 pub struct GeneratePlanningInput {
     project_id: String,
     project_name: String,
+    project_type: String,
     prd_markdown: String,
 }
 
@@ -182,7 +183,7 @@ fn ids(values: &[Value]) -> Result<HashSet<String>, String> {
     Ok(result)
 }
 
-fn validate(bundle: &PlanningBundle, project_id: &str) -> Result<(), String> {
+fn validate(bundle: &PlanningBundle, project_id: &str, project_type: &str) -> Result<(), String> {
     if bundle.features.len() < 30 {
         return Err("Codex 기능명세가 상세도 기준(30개)에 미달했습니다.".into());
     }
@@ -256,6 +257,10 @@ fn validate(bundle: &PlanningBundle, project_id: &str) -> Result<(), String> {
         .ok_or_else(|| "유저플로우 연결이 없습니다.".to_owned())?;
     let flow_ids = ids(flow_nodes)?;
     ids(flow_edges)?;
+    let is_interface_project = matches!(
+        project_type,
+        "web" | "mobile" | "desktop" | "general" | "auto"
+    );
     for node in flow_nodes {
         if node.get("projectId").and_then(Value::as_str) != Some(project_id) {
             return Err("유저플로우의 프로젝트 ID가 일치하지 않습니다.".into());
@@ -299,7 +304,7 @@ fn validate(bundle: &PlanningBundle, project_id: &str) -> Result<(), String> {
             .get("title")
             .and_then(Value::as_str)
             .unwrap_or_default();
-        if forbidden_flow_terms.iter().any(|term| title.contains(term)) {
+        if is_interface_project && forbidden_flow_terms.iter().any(|term| title.contains(term)) {
             return Err(format!(
                 "유저플로우에 내부 구현 단계가 포함되었습니다: {title}"
             ));
@@ -334,7 +339,12 @@ fn validate(bundle: &PlanningBundle, project_id: &str) -> Result<(), String> {
             .iter()
             .any(|node| node.get("kind").and_then(Value::as_str) == Some("result"));
         if !has_start || !has_result {
-            return Err("각 유저플로우에는 시작과 사용자가 확인하는 결과가 필요합니다.".into());
+            return Err(if is_interface_project {
+                "각 유저플로우에는 시작과 사용자가 확인하는 결과가 필요합니다."
+            } else {
+                "각 실행 파이프라인에는 시작과 산출물 결과가 필요합니다."
+            }
+            .into());
         }
     }
     let design_nodes = bundle
@@ -401,6 +411,19 @@ pub async fn generate_project_plan_with_codex(
     if input.project_name.trim().is_empty() || input.prd_markdown.trim().is_empty() {
         return Err("프로젝트명과 PRD가 필요합니다.".into());
     }
+    if !matches!(
+        input.project_type.as_str(),
+        "auto"
+            | "web"
+            | "mobile"
+            | "desktop"
+            | "backend_cli"
+            | "machine_learning"
+            | "data_analysis"
+            | "general"
+    ) {
+        return Err("지원하지 않는 프로젝트 유형입니다.".into());
+    }
     if input.prd_markdown.chars().count() > 50_000 {
         return Err("Codex에 전달할 PRD가 50,000자를 초과했습니다.".into());
     }
@@ -420,7 +443,15 @@ pub async fn generate_project_plan_with_codex(
         serde_json::to_vec_pretty(&schema()).map_err(|e| e.to_string())?,
     )
     .map_err(|e| e.to_string())?;
-    let prompt=format!("ProjectStudio의 PRD를 읽고 기능명세, 유저플로우, 시스템 설계를 하나의 JSON으로 생성하라. 프로젝트별 하드코딩이나 범용 문구 반복 없이 PRD의 실제 도메인, 사용자 역할, 데이터, 권한, 외부 연동, 정상·빈 상태·오류·복구·보안 흐름을 구체적으로 반영하라. 기능명세는 루트 1개 아래 대주제→화면 또는 하위 기능→사용자 동작·결과·검증 규칙의 3~4단계 트리로 30개 이상 만든다. 한 부모에서 대안이나 병렬 기능이 생기면 각각 형제 노드로 분기하고 공통 후속 기능은 별도 자식 또는 다음 대주제로 연결될 수 있게 의미 있는 parentId를 사용한다. 각 기능에는 검증 가능한 수용 기준 2~6개를 작성한다. 구현 상태는 모두 planned로 시작하되 MVP 핵심은 critical/high로 구분하라. 유저플로우는 기능명세를 펼쳐 복사하지 말고 한 명의 사용자가 목표를 이루는 실제 화면 이동만 작성한다. 각 레인은 사용자 역할과 목표가 분명한 시작(phase)→현재 화면(screen)→구체적인 클릭·입력(action)→다음 화면 또는 사용자가 보는 완료(result) 순서를 갖는다. 회원가입 방식 선택처럼 사용자가 실제로 선택하거나 화면 결과가 달라질 때만 decision을 만들고, 두 개 이상의 다음 화면으로 가로 분기한다. 오류가 실제 화면에 표시될 때만 오류 안내 화면과 수정·재시도 행동을 넣는다. 버튼명과 화면명을 구체적으로 쓰고 '실행', '처리', '검증' 같은 백그라운드 동작을 사용자 행동으로 쓰지 마라. RLS, SQL, 데이터베이스 저장, URL 안전 검증, 토큰 갱신, 캐시, 내부 권한 검사, 변경 이력은 유저플로우 노드가 아니라 기능명세 수용 기준 또는 시스템 설계에 둔다. 모든 유저플로우 laneId는 반드시 기능명세 루트 바로 아래 대주제 기능 ID 중 하나여야 한다. 대주제별 좌→우 흐름, 자연스러운 분기와 합류, 겹치지 않는 좌표를 작성하라. 시스템 설계는 클라이언트·서비스·데이터 저장소·비동기 처리·외부 시스템을 필요한 만큼 분리하고 기술, 배포, 프로토콜, 데이터 형식, 인증, 오류 복구를 명시하라. PRD에서 확정되지 않은 기술은 합리적인 MVP 후보로 제안하되 configuration에 '검토 필요'를 기록하라. 모든 ID는 영문·숫자·점·밑줄·하이픈만 사용하고 프로젝트 ID를 접두사로 사용하라. userFlow의 projectId는 정확히 '{project_id}'여야 한다. linkedFeatureIds와 linkedUserFlowIds에는 이번 JSON에 실제 존재하는 ID만 사용하라. 설명은 한국어로 작성하라. 프로젝트명: {project_name}\n프로젝트 ID: {project_id}\n\nPRD:\n{prd}",project_id=input.project_id,project_name=input.project_name.trim(),prd=input.prd_markdown);
+    let workflow_rules = if matches!(
+        input.project_type.as_str(),
+        "web" | "mobile" | "desktop" | "general" | "auto"
+    ) {
+        "userFlow는 기능명세를 복사하지 말고 실제 화면 이동만 작성한다. 각 레인은 시작(phase)→현재 화면(screen)→구체적인 클릭·입력(action)→다음 화면 또는 사용자가 보는 완료(result)를 갖는다. 내부 구현을 사용자 행동으로 쓰지 마라."
+    } else {
+        "userFlow 필드는 호환 가능한 실행 파이프라인으로 사용한다. 화면과 버튼을 만들지 말고 입력·데이터 수집→검증·정제→핵심 처리·학습·분석→평가·산출물(result)을 좌→우로 작성한다. 머신러닝은 시간 분할, 누수 검사, 기준선, 학습, 평가와 모델 버전을 포함하고 데이터 분석은 스키마, 병합 키·카디널리티, 결측·중복·이상치, 분석과 결과 계보를 포함한다."
+    };
+    let prompt=format!("ProjectStudio의 PRD를 읽고 기능명세, 작업 흐름, 시스템 설계를 하나의 JSON으로 생성하라. 프로젝트 유형은 {project_type}이며 유형에 맞지 않는 화면이나 단계를 억지로 만들지 마라. 기능명세는 루트 1개 아래 대주제→하위 기능→처리·결과·검증 규칙의 3~4단계 트리로 30개 이상 만들고 각 기능에 검증 가능한 수용 기준 2~6개를 작성한다. {workflow_rules} 모든 userFlow laneId는 기능명세 루트 바로 아래 대주제 ID여야 하고 각 레인은 phase와 result를 포함한다. 시스템 설계는 실행 환경·서비스·데이터 저장소·비동기 처리·외부 시스템을 필요한 만큼 분리하고 기술, 배포, 프로토콜, 데이터 형식, 인증, 오류 복구를 명시하라. 모든 ID는 영문·숫자·점·밑줄·하이픈만 사용하며 userFlow projectId는 '{project_id}'여야 한다. 실제 존재하는 ID만 추적 링크에 사용하고 설명은 한국어로 작성하라. 프로젝트명: {project_name}\n프로젝트 ID: {project_id}\n\nPRD:\n{prd}",project_type=input.project_type,workflow_rules=workflow_rules,project_id=input.project_id,project_name=input.project_name.trim(),prd=input.prd_markdown);
     let mut child = Command::new(program)
         .args([
             "exec",
@@ -472,7 +503,7 @@ pub async fn generate_project_plan_with_codex(
     let text = text.map_err(|e| format!("Codex 결과를 읽지 못했습니다: {e}"))?;
     let bundle: PlanningBundle = serde_json::from_str(&text)
         .map_err(|e| format!("Codex 기획 결과 형식이 올바르지 않습니다: {e}"))?;
-    validate(&bundle, &input.project_id)?;
+    validate(&bundle, &input.project_id, &input.project_type)?;
     Ok(bundle)
 }
 
