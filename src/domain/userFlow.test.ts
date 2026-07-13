@@ -14,6 +14,7 @@ describe("createUserFlowSpec",()=>{
     expect(spec.nodes.some(node=>node.kind==="screen")).toBe(false);
     expect(spec.nodes.some(node=>node.kind==="phase")).toBe(true);
     expect(spec.nodes.some(node=>node.kind==="result")).toBe(true);
+    expect(spec.nodes.every(node=>node.id.includes(projectId))).toBe(true);
   });
   it("시계열과 통계 프로젝트에 특화 단계를 적용한다",()=>{
     const ml=createExecutionPipelineSpec("ml",[],"machine_learning","time_series_forecasting");
@@ -32,6 +33,7 @@ describe("createUserFlowSpec",()=>{
   it("기본 단계 일부만 남은 실행 파이프라인을 불완전 상태로 판정한다",()=>{
     const generated=createExecutionPipelineSpec("analysis",[],"data_analysis","eda");
     expect(isIncompleteGeneratedFlow([generated.nodes.find(node=>node.title==="분석 해석")!],generated.nodes)).toBe(true);
+    expect(isIncompleteGeneratedFlow([{...generated.nodes[0],id:"pipeline-2-3"}],generated.nodes)).toBe(true);
     expect(isIncompleteGeneratedFlow([{...generated.nodes[0],id:"custom-node",title:"사용자 정의 단계"}],generated.nodes)).toBe(false);
   });
   it("요구사항별 스윔레인과 다단계 노드를 만든다",()=>{
