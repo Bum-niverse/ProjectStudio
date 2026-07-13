@@ -8,7 +8,7 @@ import { isInterfaceProject, type ProjectSubtype, type ProjectType } from "./dom
 import { UserFlowLaneNode, UserFlowNodeCard, type UserFlowNodeData } from "./UserFlowNodeCard";
 
 const nodeTypes={userFlow:UserFlowNodeCard,userFlowLane:UserFlowLaneNode};
-const FLOW_WORKSPACE_HEIGHT=1080;const SHEET_LANE_HEIGHT=760;const OVERVIEW_LANE_HEIGHT=230;const USER_FLOW_LAYOUT_VERSION="swimlane-columns-v8";
+const FLOW_WORKSPACE_HEIGHT=1080;const SHEET_LANE_HEIGHT=760;const OVERVIEW_LANE_HEIGHT=230;const USER_FLOW_LAYOUT_VERSION="swimlane-columns-v9";
 type UserFlowViewMode="sheet"|"overview"|"focus";
 interface Props{projectId:string;sourceDocumentId:string;projectName?:string;projectIdea?:string;projectType:ProjectType;projectSubtype?:ProjectSubtype;}
 function FlowEditor({node,lanes,nextNodes,onSave,onClose}:{node:UserFlowNode;lanes:import("./domain/userFlow").UserFlowLane[];nextNodes:UserFlowNode[];onSave:(node:UserFlowNode)=>Promise<void>;onClose:()=>void}){

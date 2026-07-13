@@ -43,6 +43,26 @@ pub struct SystemNode {
     pub commit: Option<String>,
     #[serde(default)]
     pub deployment_status: Option<String>,
+    #[serde(default)]
+    pub data_ml_type: Option<String>,
+    #[serde(default)]
+    pub input_schema: Option<String>,
+    #[serde(default)]
+    pub output_schema: Option<String>,
+    #[serde(default)]
+    pub execution_mode: Option<String>,
+    #[serde(default)]
+    pub schedule: Option<String>,
+    #[serde(default)]
+    pub reproducibility: Option<String>,
+    #[serde(default)]
+    pub data_version: Option<String>,
+    #[serde(default)]
+    pub model_version: Option<String>,
+    #[serde(default)]
+    pub related_dataset_ids: Vec<String>,
+    #[serde(default)]
+    pub related_task_ids: Vec<String>,
     pub position: Point,
     pub size: Size,
 }
@@ -61,6 +81,16 @@ pub struct SystemEdge {
     pub authentication: String,
     pub error_handling: String,
     pub description: String,
+    #[serde(default)]
+    pub schema: Option<String>,
+    #[serde(default)]
+    pub execution_order: Option<u32>,
+    #[serde(default)]
+    pub storage_location: Option<String>,
+    #[serde(default)]
+    pub is_encrypted: Option<bool>,
+    #[serde(default)]
+    pub contains_sensitive_data: Option<bool>,
 }
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -136,6 +166,8 @@ pub struct SystemWorkspace {
 pub struct InitializeInput {
     project_id: String,
     initial_snapshot: SystemSnapshot,
+    #[serde(default)]
+    replace_incompatible: bool,
     created_at: String,
 }
 #[derive(Deserialize)]
@@ -190,6 +222,35 @@ fn valid_id(value: &str) -> bool {
         && value
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+}
+fn valid_data_ml_type(value: &str) -> bool {
+    matches!(
+        value,
+        "data_source"
+            | "collector"
+            | "validation_job"
+            | "cleaning_job"
+            | "transform_job"
+            | "join_job"
+            | "feature_job"
+            | "training_job"
+            | "evaluation_job"
+            | "batch_inference"
+            | "scheduler"
+            | "raw_storage"
+            | "processed_storage"
+            | "feature_store"
+            | "model_registry"
+            | "artifact_storage"
+            | "experiment_store"
+            | "notebook"
+            | "analysis"
+            | "baseline_model"
+            | "candidate_model"
+            | "report"
+            | "dashboard"
+            | "model_service"
+    )
 }
 pub fn validate_snapshot(snapshot: &SystemSnapshot) -> Result<(), String> {
     if snapshot.schema_version != 1
@@ -248,6 +309,14 @@ pub fn validate_snapshot(snapshot: &SystemSnapshot) -> Result<(), String> {
                         | "deprecated"
                 )
             })
+            || node
+                .data_ml_type
+                .as_deref()
+                .is_some_and(|value| !valid_data_ml_type(value))
+            || node
+                .execution_mode
+                .as_deref()
+                .is_some_and(|value| !matches!(value, "batch" | "streaming" | "interactive"))
             || ![
                 node.position.x,
                 node.position.y,
@@ -407,6 +476,34 @@ pub async fn initialize_system_design(
         )
         .await?;
         tx.commit().await.map_err(|e| e.to_string())?;
+    } else if input.replace_incompatible
+        && input
+            .initial_snapshot
+            .nodes
+            .iter()
+            .any(|node| node.data_ml_type.is_some())
+    {
+        let current_json: String = sqlx::query_scalar("SELECT r.snapshot_json FROM system_designs d JOIN system_design_revisions r ON r.id=d.current_revision_id WHERE d.project_id=?")
+            .bind(&input.project_id)
+            .fetch_one(&mut db)
+            .await
+            .map_err(|e| e.to_string())?;
+        let current: SystemSnapshot =
+            serde_json::from_str(&current_json).map_err(|e| e.to_string())?;
+        if !current.nodes.iter().any(|node| node.data_ml_type.is_some()) {
+            let design_id = exists.expect("existing design id");
+            let mut tx = db.begin().await.map_err(|e| e.to_string())?;
+            insert_revision(
+                &mut tx,
+                &input.project_id,
+                &design_id,
+                &input.initial_snapshot,
+                "development_mode",
+                &input.created_at,
+            )
+            .await?;
+            tx.commit().await.map_err(|e| e.to_string())?;
+        }
     }
     load_workspace(&mut db, &input.project_id).await
 }
@@ -568,6 +665,16 @@ mod tests {
                 branch: None,
                 commit: None,
                 deployment_status: None,
+                data_ml_type: None,
+                input_schema: None,
+                output_schema: None,
+                execution_mode: None,
+                schedule: None,
+                reproducibility: None,
+                data_version: None,
+                model_version: None,
+                related_dataset_ids: vec![],
+                related_task_ids: vec![],
                 position: Point { x: 0.0, y: 0.0 },
                 size: Size {
                     width: 100.0,
@@ -593,6 +700,11 @@ mod tests {
             authentication: "".into(),
             error_handling: "".into(),
             description: "".into(),
+            schema: None,
+            execution_order: None,
+            storage_location: None,
+            is_encrypted: None,
+            contains_sensitive_data: None,
         });
         assert!(validate_snapshot(&value).is_err());
     }
@@ -604,5 +716,28 @@ mod tests {
         assert_eq!(value.architecture_pattern, "auto");
         assert_eq!(value.active_c4_level, "container");
         assert!(validate_snapshot(&value).is_ok());
+    }
+    #[test]
+    fn preserves_data_ml_metadata_during_serialization() {
+        let mut value = sample();
+        value.nodes[0].data_ml_type = Some("training_job".into());
+        value.nodes[0].execution_mode = Some("batch".into());
+        value.nodes[0].data_version = Some("dataset-v1".into());
+        value.nodes[0].related_dataset_ids = vec!["prices".into()];
+
+        let json = serde_json::to_string(&value).expect("serialize snapshot");
+        let restored: SystemSnapshot = serde_json::from_str(&json).expect("deserialize snapshot");
+
+        assert_eq!(
+            restored.nodes[0].data_ml_type.as_deref(),
+            Some("training_job")
+        );
+        assert_eq!(restored.nodes[0].execution_mode.as_deref(), Some("batch"));
+        assert_eq!(
+            restored.nodes[0].data_version.as_deref(),
+            Some("dataset-v1")
+        );
+        assert_eq!(restored.nodes[0].related_dataset_ids, vec!["prices"]);
+        assert!(validate_snapshot(&restored).is_ok());
     }
 }
