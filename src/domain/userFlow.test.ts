@@ -18,8 +18,11 @@ describe("createUserFlowSpec",()=>{
     expect(spec.nodes.some(node=>node.kind==="phase")).toBe(true);
     expect(spec.edges.length).toBeGreaterThan(spec.lanes.length);
     expect(spec.nodes.some(node=>node.kind==="result")).toBe(true);
-    expect(spec.nodes.some(node=>node.kind==="action"&&node.title.endsWith("실행"))).toBe(true);
+    expect(spec.nodes.some(node=>node.kind==="action"&&/선택|입력|제출|저장/.test(node.title))).toBe(true);
     expect(spec.nodes.every(node=>!node.title.includes("저장·변경 이력"))).toBe(true);
+    expect(spec.nodes.every(node=>!/RLS|데이터베이스|캐시 갱신|토큰 저장/.test(node.title))).toBe(true);
+    for(const decision of spec.nodes.filter(node=>node.kind==="decision"))expect(spec.edges.filter(edge=>edge.sourceNodeId===decision.id).length).toBeGreaterThanOrEqual(2);
+    expect(spec.nodes.some(node=>node.title==="문제 확인 후 다시 시도")).toBe(true);
     expect(spec.edges.length).toBeGreaterThanOrEqual(spec.nodes.length-spec.lanes.length);
   });
   it("Globeat은 장소 기반 음악 기능군과 흐름을 만든다",()=>{

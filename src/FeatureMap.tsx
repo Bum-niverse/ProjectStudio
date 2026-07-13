@@ -23,7 +23,7 @@ type LayoutDensity = "default" | "compact";
 type FeatureNode = Node<FeatureNodeData>;
 const nodeTypes = { feature: FeatureNodeCard };
 const MAGNET_DISTANCE = 34;
-const FEATURE_NODE_LAYOUT_VERSION="idea-driven-spacing-v5";
+const FEATURE_NODE_LAYOUT_VERSION="branch-sheet-tree-v6";
 const FEATURE_BRANCH_COLOR_VERSION="idea-driven-colors-v3";
 const BRANCH_COLORS:NodeColorKey[]=["green","cyan","amber","violet","rose","slate"];
 
@@ -41,7 +41,13 @@ interface FeatureMapProps {
   projectIdea?: string;
 }
 
-function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutDensity="default"): FeatureNode[] {
+function descendantsOf(features:FeatureSpec[],originId:string):FeatureSpec[]{
+  const visible=new Set([originId]);let changed=true;
+  while(changed){changed=false;for(const feature of features){if(feature.parentId&&visible.has(feature.parentId)&&!visible.has(feature.id)){visible.add(feature.id);changed=true;}}}
+  return features.filter(feature=>visible.has(feature.id));
+}
+
+function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutDensity="default",rootOverride?:string): FeatureNode[] {
   const childrenByParent = new Map<string | undefined, FeatureSpec[]>();
   for (const feature of features) {
     const siblings = childrenByParent.get(feature.parentId) ?? [];
@@ -50,7 +56,7 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutD
   }
 
   const positions = new Map<string, { x: number; y: number }>();
-  const root = features.find((feature) => !feature.parentId);
+  const root = features.find((feature) => feature.id===rootOverride)??features.find((feature) => !feature.parentId);
   if (!root) return [];
   positions.set(root.id, mode === "tree" ? { x: 40, y: 210 } : { x: 430, y: 260 });
 
@@ -77,12 +83,6 @@ function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutD
       if(feature.parentId===root.id&&nextLeafRow>0)nextLeafRow+=density==="compact"?1.2:1.65;
       const children = childrenByParent.get(feature.id) ?? [];
       const horizontalGap=density==="compact"?285:330;
-      if(children.length>1&&children.every(child=>(childrenByParent.get(child.id)??[]).length===0)){
-        const y=35+nextLeafRow++*(density==="compact"?46:58);
-        positions.set(feature.id,{x:30+depth*horizontalGap,y});
-        children.forEach((child,index)=>positions.set(child.id,{x:30+(depth+1+index)*horizontalGap,y}));
-        return y;
-      }
       const y = children.length === 0 ? 35 + nextLeafRow++ * (density==="compact"?46:58) : children.map((child) => placeTreeNode(child, depth + 1)).reduce((sum, value) => sum + value, 0) / children.length;
       positions.set(feature.id, { x: 30 + depth * horizontalGap, y });
       return y;
@@ -122,8 +122,12 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIde
   const [features, setFeatures] = useState(generatedFeatures);
   const [mode, setMode] = useState<WorkspaceViewMode>("document");
   const [layoutDensity,setLayoutDensity]=useState<LayoutDensity>("default");
+  const [activeBranchId,setActiveBranchId]=useState<string>("all");
   const mapMode: ViewMode = mode === "mindmap" ? "mindmap" : "tree";
-  const defaultNodes = useMemo(() => layoutFeatures(features, mapMode,layoutDensity), [features, mapMode,layoutDensity]);
+  const rootFeature=features.find(feature=>!feature.parentId);
+  const majorFeatures=features.filter(feature=>feature.parentId===rootFeature?.id).sort((a,b)=>a.sortOrder-b.sortOrder);
+  const visibleFeatures=useMemo(()=>mode==="tree"&&activeBranchId!=="all"?descendantsOf(features,activeBranchId):features,[activeBranchId,features,mode]);
+  const defaultNodes = useMemo(() => layoutFeatures(visibleFeatures, mapMode,layoutDensity,activeBranchId!=="all"?activeBranchId:undefined), [activeBranchId,layoutDensity,mapMode,visibleFeatures]);
   const [positionsByMode, setPositionsByMode] = useState<Record<ViewMode, Record<string, { x: number; y: number }>>>({ tree: {}, mindmap: {} });
   const [persistenceMessage, setPersistenceMessage] = useState("기능명세를 불러오는 중…");
   const [selectedFeatureId, setSelectedFeatureId] = useState<string>();
@@ -141,14 +145,15 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIde
       if(shouldUpgrade){const tree=layoutFeatures(displayFeatures,"tree");const mindmap=layoutFeatures(displayFeatures,"mindmap");setPositionsByMode({tree:Object.fromEntries(tree.map(node=>[node.id,node.position])),mindmap:Object.fromEntries(mindmap.map(node=>[node.id,node.position]))});void Promise.all([...tree.map(node=>repository.savePosition({projectId,featureId:node.id,viewMode:"tree",positionX:node.position.x,positionY:node.position.y})),...mindmap.map(node=>repository.savePosition({projectId,featureId:node.id,viewMode:"mindmap",positionX:node.position.x,positionY:node.position.y}))]).then(()=>localStorage.setItem(layoutKey,FEATURE_NODE_LAYOUT_VERSION));setPersistenceMessage("대주제 색상과 그룹 간격을 적용했습니다.");}else{setPositionsByMode({tree:Object.fromEntries(positions.filter(item=>item.viewMode==="tree").map(item=>[item.featureId,{x:item.positionX,y:item.positionY}])),mindmap:Object.fromEntries(positions.filter(item=>item.viewMode==="mindmap").map(item=>[item.featureId,{x:item.positionX,y:item.positionY}]))});setPersistenceMessage("SQLite와 동기화됨");}
     }).catch(() => setPersistenceMessage("기능명세 저장소를 연결하지 못했습니다."));
   }, [generatedFeatures, projectId, repository, sourceDocumentId]);
-  const rootId=features.find(feature=>!feature.parentId)?.id;const nodes = defaultNodes.map((node) => ({ ...node, selected:node.id===activeNodeId, position: positionsByMode[mapMode][node.id] ?? node.position, data: { ...node.data,isMajor:node.data.feature.parentId===rootId, onSelect:(feature:FeatureSpec)=>setActiveNodeId(current=>current===feature.id?undefined:feature.id), onAdd: handleAddFeature, onEdit: (feature:FeatureSpec)=>setSelectedFeatureId(feature.id), onDelete: handleDeleteFeature } }));
-  const edges: Edge[] = features
-    .filter((feature) => feature.parentId)
+  const rootId=rootFeature?.id;const nodes = defaultNodes.map((node) => ({ ...node, selected:node.id===activeNodeId, position: activeBranchId==="all"?(positionsByMode[mapMode][node.id] ?? node.position):node.position, data: { ...node.data,isMajor:node.data.feature.parentId===rootId||node.id===activeBranchId, onSelect:(feature:FeatureSpec)=>setActiveNodeId(current=>current===feature.id?undefined:feature.id), onAdd: handleAddFeature, onEdit: (feature:FeatureSpec)=>setSelectedFeatureId(feature.id), onDelete: handleDeleteFeature } }));
+  const visibleIds=new Set(visibleFeatures.map(feature=>feature.id));
+  const edges: Edge[] = visibleFeatures
+    .filter((feature) => feature.parentId&&visibleIds.has(feature.parentId))
     .map((feature) => {const color=NODE_COLORS.find(item=>item.key===feature.colorKey)?.color??"var(--theme-border)";return({
       id: `${feature.parentId}-${feature.id}`,
       source: feature.parentId!,
       target: feature.id,
-      type: "default",
+      type: "smoothstep",
       style:{stroke:color,strokeWidth:1.4},markerEnd: { type: MarkerType.ArrowClosed,color },
     });});
 
@@ -222,6 +227,7 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIde
           <button className="proposal-open-button" onClick={() => setIsProposalPanelOpen(true)} type="button">AI 변경안</button>
         </div>
       </div>
+      {mode === "tree"&&<nav aria-label="기능명세 대주제 시트" className="feature-tree-sheet-tabs"><button aria-current={activeBranchId==="all"?"page":undefined} className={activeBranchId==="all"?"selected":""} onClick={()=>setActiveBranchId("all")} type="button">전체 기능</button>{majorFeatures.map(feature=><button aria-current={activeBranchId===feature.id?"page":undefined} className={activeBranchId===feature.id?"selected":""} key={feature.id} onClick={()=>setActiveBranchId(feature.id)} type="button">{feature.title}</button>)}</nav>}
       {mode === "document" ? <FeatureDocumentView features={features} onSave={handleSaveFeature} /> : <div className="feature-canvas" data-view-mode={mode}>
         <ReactFlow nodes={nodes} edges={edges.map(edge=>({...edge,selected:edge.id===edgeMenu?.id}))} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onEdgeClick={(event,edge)=>{event.stopPropagation();const canvas=(event.currentTarget as Element).closest(".feature-canvas")?.getBoundingClientRect();if(canvas)setEdgeMenu({id:edge.id,target:edge.target,x:event.clientX-canvas.left,y:event.clientY-canvas.top});}} onPaneClick={()=>setEdgeMenu(undefined)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.12, duration: 0, maxZoom: 0.9 }} onInit={instance=>requestAnimationFrame(()=>requestAnimationFrame(()=>void instance.fitView({padding:.12,maxZoom:.9,duration:0})))} minZoom={0.12} maxZoom={1.8} panOnScroll proOptions={{hideAttribution:true}}>
           <Background color="var(--theme-border)" gap={24} size={1} />

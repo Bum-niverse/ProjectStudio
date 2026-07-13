@@ -7,7 +7,7 @@ import { connectedUserFlowNodeIds, createUserFlowSpec, type UserFlowNode, type U
 import { UserFlowLaneNode, UserFlowNodeCard, type UserFlowNodeData } from "./UserFlowNodeCard";
 
 const nodeTypes={userFlow:UserFlowNodeCard,userFlowLane:UserFlowLaneNode};
-const FLOW_WORKSPACE_HEIGHT=1080;const SHEET_LANE_HEIGHT=680;const OVERVIEW_LANE_HEIGHT=170;const USER_FLOW_LAYOUT_VERSION="idea-driven-flow-v5";
+const FLOW_WORKSPACE_HEIGHT=1080;const SHEET_LANE_HEIGHT=680;const OVERVIEW_LANE_HEIGHT=170;const USER_FLOW_LAYOUT_VERSION="user-journey-contract-v6";
 type UserFlowViewMode="sheet"|"overview"|"focus";
 interface Props{projectId:string;sourceDocumentId:string;projectName?:string;projectIdea?:string;}
 function FlowEditor({node,onSave,onClose}:{node:UserFlowNode;onSave:(node:UserFlowNode)=>Promise<void>;onClose:()=>void}){
