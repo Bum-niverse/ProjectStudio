@@ -28,6 +28,12 @@
 | --- | --- |
 | ![Globeat 인증 과정을 여러 로그인 경로로 분기한 유저플로우](docs/assets/readme/user-flow.png) | ![Globeat 서비스와 데이터 흐름을 C4 Container 수준으로 표현한 시스템 설계](docs/assets/readme/system-design.png) |
 
+### 전체 유저플로우
+
+`전체 보기`에서는 Globeat의 110개 사용자 단계를 여러 요구사항별 스윔레인으로 한 번에 탐색할 수 있습니다.
+
+![Globeat의 여러 요구사항별 스윔레인을 함께 펼친 전체 유저플로우](docs/assets/readme/user-flow-all.png)
+
 ## 현재 단계
 
 웹·모바일 프로젝트의 PRD·기능명세·유저플로우·시스템 설계·내보내기와 데이터 분석·머신러닝 프로젝트의 문제 정의·데이터 설계·실험 파이프라인·데이터/ML 시스템 설계·실행 계획 흐름을 로컬 SQLite 리비전으로 관리합니다. Pure Black·VS Code Light·Neutral Gray·VS Code Dark 테마, 로컬 Codex/Git/GitHub CLI 상태와 프로젝트별 Git 저장소 연결을 지원합니다. 현재 구현은 개인용 로컬 프로그램에 집중하며 결제와 다중 사용자 협업은 제외합니다.
