@@ -4,15 +4,29 @@
 
 앱을 열면 GitHub 로그인 잠금 화면이 먼저 표시됩니다. GitHub CLI로 인증된 사용자는 각자 자신의 Windows 계정에 저장된 로컬 작업대를 열 수 있으며 로그인 전에는 프로젝트 데이터베이스를 읽지 않습니다. 인증 토큰은 ProjectStudio가 저장하지 않고 GitHub CLI의 Windows keyring 세션을 사용합니다. `Bum-niverse` 소유자 계정에만 개발자 모드가 표시됩니다.
 
-## 목표
+![Globeat 샘플 작업공간에서 PRD, 기능명세, 유저플로우와 시스템 설계로 이동하는 ProjectStudio 데모](docs/assets/readme/globeat-workflow-demo.gif)
 
-- AI 채팅 기반 기획
-- 시각적 PRD와 계층형 기능명세
-- 유저플로우 또는 실행 파이프라인
-- 코멘트, 변경 기록과 AI 변경안 승인·거절
-- 시스템 설계 캔버스와 Markdown/JSON/Mermaid/PlantUML/Structurizr 내보내기
-- 기획 항목과 Git 브랜치·커밋·코드·테스트 연결
-- 기획부터 개발 완료까지 상태 추적
+> 실제 ProjectStudio에 저장된 Globeat 샘플 작업공간으로 촬영한 데모입니다.
+
+## 핵심 기능
+
+### 1. 아이디어에서 검증 가능한 기획 산출물까지
+
+프로젝트 유형과 아이디어를 입력하면 PRD를 시작으로 계층형 기능명세, 유저플로우 또는 실행 파이프라인, 시스템 설계까지 한 흐름에서 발전시킵니다. Codex CLI 생성 결과는 구조와 연결 무결성을 검사하며, AI 변경안은 사용자가 승인하기 전 원본에 반영하지 않습니다.
+
+### 2. 요구사항과 사용자 흐름을 시각적으로 추적
+
+기능을 문서·트리·마인드맵으로 전환하고, 사용자에게 보이는 화면과 행동만 스윔레인 유저플로우로 정리합니다. 시스템 설계에서는 C4 수준, 런타임 시나리오, ADR과 요구사항 연결을 하나의 캔버스에서 검토합니다.
+
+### 3. 로컬 우선 개발 핸드오프
+
+프로젝트와 모든 리비전을 로컬 SQLite에 저장하고 Git 브랜치·커밋·코드·테스트와 연결합니다. Markdown, JSON, CSV, Mermaid, PlantUML, Structurizr와 PDF로 내보내며, 프로젝트 내용과 인증 토큰을 ProjectStudio 서버에 저장하지 않습니다.
+
+## 실제 화면
+
+| 요구사항 기반 유저플로우 | 추적 가능한 시스템 설계 |
+| --- | --- |
+| ![Globeat 인증 과정을 여러 로그인 경로로 분기한 유저플로우](docs/assets/readme/user-flow.png) | ![Globeat 서비스와 데이터 흐름을 C4 Container 수준으로 표현한 시스템 설계](docs/assets/readme/system-design.png) |
 
 ## 현재 단계
 
