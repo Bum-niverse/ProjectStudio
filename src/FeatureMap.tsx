@@ -123,6 +123,8 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIde
   const repository = useMemo(() => createFeatureRepository(), []);
   const generatedFeatures = useMemo(() => createDevelopmentFeatureSpec(projectId, projectName,projectIdea), [projectId, projectName,projectIdea]);
   const [features, setFeatures] = useState(generatedFeatures);
+  const [loadedProjectId, setLoadedProjectId] = useState<string>();
+  const isLoadingFeatures = loadedProjectId !== projectId;
   const [mode, setMode] = useState<WorkspaceViewMode>("document");
   const [layoutDensity,setLayoutDensity]=useState<LayoutDensity>("default");
   const [activeBranchId,setActiveBranchId]=useState<string>("all");
@@ -146,7 +148,9 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIde
       const colorKey=`projectstudio:${projectId}:feature-branch-colors`;const shouldColor=localStorage.getItem(colorKey)!==FEATURE_BRANCH_COLOR_VERSION;const displayFeatures=shouldColor?colorFeatureBranches(storedFeatures):storedFeatures;setFeatures(displayFeatures);if(shouldColor)void Promise.all(displayFeatures.map(feature=>repository.updateFeature(projectId,feature))).then(()=>localStorage.setItem(colorKey,FEATURE_BRANCH_COLOR_VERSION));
       const layoutKey=`projectstudio:${projectId}:feature-node-layout`;const shouldUpgrade=localStorage.getItem(layoutKey)!==FEATURE_NODE_LAYOUT_VERSION;
       if(shouldUpgrade){const tree=layoutFeatures(displayFeatures,"tree");const mindmap=layoutFeatures(displayFeatures,"mindmap");setPositionsByMode({tree:Object.fromEntries(tree.map(node=>[node.id,node.position])),mindmap:Object.fromEntries(mindmap.map(node=>[node.id,node.position]))});void Promise.all([...tree.map(node=>repository.savePosition({projectId,featureId:node.id,viewMode:"tree",positionX:node.position.x,positionY:node.position.y})),...mindmap.map(node=>repository.savePosition({projectId,featureId:node.id,viewMode:"mindmap",positionX:node.position.x,positionY:node.position.y}))]).then(()=>localStorage.setItem(layoutKey,FEATURE_NODE_LAYOUT_VERSION));setPersistenceMessage("대주제 색상과 그룹 간격을 적용했습니다.");}else{setPositionsByMode({tree:Object.fromEntries(positions.filter(item=>item.viewMode==="tree").map(item=>[item.featureId,{x:item.positionX,y:item.positionY}])),mindmap:Object.fromEntries(positions.filter(item=>item.viewMode==="mindmap").map(item=>[item.featureId,{x:item.positionX,y:item.positionY}]))});setPersistenceMessage("SQLite와 동기화됨");}
-    }).catch(() => setPersistenceMessage("기능명세 저장소를 연결하지 못했습니다."));
+    })
+      .catch(() => setPersistenceMessage("기능명세 저장소를 연결하지 못했습니다."))
+      .finally(() => setLoadedProjectId(projectId));
   }, [generatedFeatures, projectId, repository, sourceDocumentId]);
   const rootId=rootFeature?.id;const nodes = defaultNodes.map((node) => ({ ...node, selected:node.id===activeNodeId, position: activeBranchId==="all"?(positionsByMode[mapMode][node.id] ?? node.position):node.position, data: { ...node.data,isMajor:node.data.feature.parentId===rootId||node.id===activeBranchId, onSelect:(feature:FeatureSpec)=>setActiveNodeId(current=>current===feature.id?undefined:feature.id), onAdd: handleAddFeature, onEdit: (feature:FeatureSpec)=>setSelectedFeatureId(feature.id), onDelete: handleDeleteFeature } }));
   const visibleIds=new Set(visibleFeatures.map(feature=>feature.id));
@@ -230,8 +234,8 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIde
           <button className="proposal-open-button" onClick={() => setIsProposalPanelOpen(true)} type="button">{t("aiProposal")}</button>
         </div>
       </div>
-      {mode === "tree"&&<nav aria-label="기능명세 대주제 시트" className="feature-tree-sheet-tabs"><button aria-current={activeBranchId==="all"?"page":undefined} className={activeBranchId==="all"?"selected":""} onClick={()=>setActiveBranchId("all")} type="button">전체 기능</button>{majorFeatures.map(feature=><button aria-current={activeBranchId===feature.id?"page":undefined} className={activeBranchId===feature.id?"selected":""} key={feature.id} onClick={()=>setActiveBranchId(feature.id)} type="button">{feature.title}</button>)}</nav>}
-      {mode === "document" ? <FeatureDocumentView features={features} onSave={handleSaveFeature} /> : <div className="feature-canvas" data-view-mode={mode}>
+      {!isLoadingFeatures&&mode === "tree"&&<nav aria-label="기능명세 대주제 시트" className="feature-tree-sheet-tabs"><button aria-current={activeBranchId==="all"?"page":undefined} className={activeBranchId==="all"?"selected":""} onClick={()=>setActiveBranchId("all")} type="button">전체 기능</button>{majorFeatures.map(feature=><button aria-current={activeBranchId===feature.id?"page":undefined} className={activeBranchId===feature.id?"selected":""} key={feature.id} onClick={()=>setActiveBranchId(feature.id)} type="button">{feature.title}</button>)}</nav>}
+      {isLoadingFeatures ? <p className="feature-loading-state" role="status">기능명세 구조를 불러오는 중입니다.</p> : mode === "document" ? <FeatureDocumentView features={features} onSave={handleSaveFeature} /> : <div className="feature-canvas" data-view-mode={mode}>
         <ReactFlow nodes={nodes} edges={edges.map(edge=>({...edge,selected:edge.id===edgeMenu?.id}))} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onEdgeClick={(event,edge)=>{event.stopPropagation();const canvas=(event.currentTarget as Element).closest(".feature-canvas")?.getBoundingClientRect();if(canvas)setEdgeMenu({id:edge.id,target:edge.target,x:event.clientX-canvas.left,y:event.clientY-canvas.top});}} onPaneClick={()=>setEdgeMenu(undefined)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.12, duration: 0, maxZoom: 0.9 }} onInit={instance=>requestAnimationFrame(()=>requestAnimationFrame(()=>void instance.fitView({padding:.12,maxZoom:.9,duration:0})))} minZoom={0.12} maxZoom={1.8} panOnScroll proOptions={{hideAttribution:true}}>
           <Background color="var(--theme-border)" gap={24} size={1} />
           <Controls showInteractive={false} />
