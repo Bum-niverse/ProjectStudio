@@ -15,4 +15,15 @@ describe("feature tree layout",()=>{
     expect(minimumGap(compactLeafRows)).toBeGreaterThanOrEqual(68);
     expect(Math.max(...expanded.map(node=>node.position.x))).toBeGreaterThan(Math.max(...compact.map(node=>node.position.x)));
   });
+
+  it("마인드맵은 루트 주변에 기능을 방사형으로 배치한다",()=>{
+    const features=createDevelopmentFeatureSpec("mindmap-project","여행 계획","여행 일정을 만들고 공유한다.");
+    const nodes=layoutFeatures(features,"mindmap");
+    const root=nodes.find(node=>node.id==="mindmap-project-root");
+    const nonRoot=nodes.filter(node=>node.id!==root?.id);
+    expect(root?.position).toEqual({x:430,y:260});
+    expect(new Set(nonRoot.map(node=>`${Math.round(node.position.x)},${Math.round(node.position.y)}`)).size).toBeGreaterThan(8);
+    expect(nonRoot.some(node=>node.position.x<430)).toBe(true);
+    expect(nonRoot.some(node=>node.position.x>430)).toBe(true);
+  });
 });

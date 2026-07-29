@@ -33,6 +33,7 @@ export async function generateAndSavePlanningBundle(input: {
   sourceDocumentId: string;
   prdMarkdown: string;
   replaceExisting?: boolean;
+  locale?: "ko" | "en";
 }): Promise<PlanningGenerationResult> {
   if (!isTauri()) throw new Error("Codex 상세 기획 생성은 데스크톱 앱에서 사용할 수 있습니다.");
   const bundle = await invoke<PlanningBundle>("generate_project_plan_with_codex", { input });

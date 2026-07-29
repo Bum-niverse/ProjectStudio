@@ -1,6 +1,7 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import type { FeatureSpec } from "../domain/feature";
 import type { FeaturePosition, FeatureRepository } from "../ports/featureRepository";
+import { globeatDemo, isGlobeatDemoProject } from "../demo/globeatDemo";
 
 class TauriFeatureRepository implements FeatureRepository {
   initialize(projectId: string, sourceDocumentId: string, features: FeatureSpec[], replaceExisting=false) {
@@ -22,8 +23,14 @@ class TauriFeatureRepository implements FeatureRepository {
 }
 
 class BrowserFeatureRepository implements FeatureRepository {
-  async initialize(_projectId: string, _sourceDocumentId: string, features: FeatureSpec[]) { return features; }
-  async listPositions(projectId: string) { return JSON.parse(localStorage.getItem(`projectstudio:${projectId}:feature-positions`) ?? "[]") as FeaturePosition[]; }
+  async initialize(projectId: string, _sourceDocumentId: string, features: FeatureSpec[]) {
+    return isGlobeatDemoProject(projectId) ? globeatDemo.features : features;
+  }
+  async listPositions(projectId: string) {
+    const saved = localStorage.getItem(`projectstudio:${projectId}:feature-positions`);
+    if (saved) return JSON.parse(saved) as FeaturePosition[];
+    return isGlobeatDemoProject(projectId) ? globeatDemo.positions : [];
+  }
   async savePosition(position: FeaturePosition) {
     const key = `projectstudio:${position.projectId}:feature-positions`;
     const current = JSON.parse(localStorage.getItem(key) ?? "[]") as FeaturePosition[];

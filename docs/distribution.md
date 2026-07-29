@@ -20,15 +20,17 @@ pnpm install --frozen-lockfile
 pnpm tauri build
 ```
 
-결과는 `src-tauri/target/release/bundle/nsis`와 `src-tauri/target/release/bundle/msi`에 생성된다. 일반 지인 공유에는 설치 과정이 단순한 NSIS `.exe`를 우선 사용하고 관리형 설치가 필요하면 MSI를 사용한다.
+결과는 `src-tauri/target/release/bundle/nsis`와 `src-tauri/target/release/bundle/msi`에 생성된다. 일반 설치에는 과정이 단순한 NSIS `.exe`를 우선 사용하고 관리형 설치가 필요하면 MSI를 사용한다.
 
-## private GitHub 공유
+## 공개 GitHub 배포
 
-저장소는 private으로 유지한다. 소스를 함께 개발할 지인만 GitHub 저장소 Collaborator로 초대한다. 단순 사용자는 소스 접근 권한 없이 빌드된 설치 파일만 전달한다. 설치 파일에 프로젝트 SQLite, GitHub 토큰, 로컬 경로와 내보낸 문서가 포함되지 않았는지 배포 전에 확인한다.
+소스와 릴리스는 공개 GitHub 저장소에서 배포한다. 각 버전은 Release note, NSIS·MSI 설치 파일과 SHA-256 체크섬을 함께 제공한다. 설치 파일에 프로젝트 SQLite, GitHub·Codex 토큰, 로컬 경로와 사용자가 내보낸 문서가 포함되지 않았는지 공개 전 검사한다.
+
+브라우저 데모는 GitHub Pages에 정적 빌드로 배포한다. 데모 번들에는 검토된 Globeat fixture만 포함하고 Tauri IPC, 로컬 SQLite, 파일 시스템과 CLI 기능은 사용할 수 없다. 데모에서 발생한 변경은 브라우저 `localStorage`에만 저장되며 초기화할 수 있다.
 
 ## Windows 경고
 
-현재 베타 설치 파일에는 유료 코드 서명 인증서를 적용하지 않는다. 따라서 Windows SmartScreen이 `알 수 없는 게시자` 경고를 표시할 수 있다. 파일의 커밋, 버전과 SHA-256 체크섬을 함께 전달하고 신뢰할 수 있는 지인에게만 공유한다.
+현재 베타 설치 파일에는 유료 코드 서명 인증서를 적용하지 않는다. 따라서 Windows SmartScreen이 `알 수 없는 게시자` 경고를 표시할 수 있다. GitHub Release 게시자, 커밋, 버전과 SHA-256 체크섬을 확인한 뒤 설치한다.
 
 ```powershell
 Get-FileHash .\ProjectStudio_0.3.0_x64-setup.exe -Algorithm SHA256

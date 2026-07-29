@@ -2,11 +2,25 @@
 
 개인 프로젝트의 아이디어를 PRD, 기능명세, 유저플로우 또는 실행 파이프라인, 시스템 설계로 발전시키고 실제 코드·커밋·테스트·완료 상태까지 추적하는 로컬 우선 데스크톱 프로그램입니다.
 
+[Globeat 공개 데모 열기](https://bum-niverse.github.io/ProjectStudio/) · [최신 Windows 설치 파일](https://github.com/Bum-niverse/ProjectStudio/releases/latest)
+
+공개 데모는 별도 설치나 로그인 없이 버튼만 눌러 Globeat의 PRD, 151개 기능명세, 트리·마인드맵, 110개 유저플로우 노드와 시스템 설계를 살펴볼 수 있습니다. 변경 사항은 현재 브라우저에만 남으며 `데모 초기화`로 원본 상태로 돌아갑니다.
+
 앱을 열면 GitHub 로그인 잠금 화면이 먼저 표시됩니다. GitHub CLI로 인증된 사용자는 각자 자신의 Windows 계정에 저장된 로컬 작업대를 열 수 있으며 로그인 전에는 프로젝트 데이터베이스를 읽지 않습니다. 인증 토큰은 ProjectStudio가 저장하지 않고 GitHub CLI의 Windows keyring 세션을 사용합니다. `Bum-niverse` 소유자 계정에만 개발자 모드가 표시됩니다.
 
 ![Globeat 샘플 작업공간에서 PRD, 기능명세, 유저플로우와 시스템 설계로 이동하는 ProjectStudio 데모](docs/assets/readme/globeat-workflow-demo.gif)
 
 > 실제 ProjectStudio에 저장된 Globeat 샘플 작업공간으로 촬영한 데모입니다.
+
+## 3분 사용법
+
+1. Windows 설치 파일을 설치하고 [GitHub CLI](https://cli.github.com/)로 로그인합니다.
+2. 아이디어와 프로젝트 유형을 입력하면 ProjectStudio가 PRD 초안을 로컬 SQLite에 먼저 저장합니다.
+3. 로컬에서 로그인된 Codex CLI가 있으면 `Codex로 상세 산출물 생성`을 누릅니다. ProjectStudio가 현재 PRD를 Codex에 구조화 입력으로 전달하고 기능 노드, 수용 기준, 유저플로우와 시스템 설계를 자동 생성합니다.
+4. `문서 · 트리 · 마인드맵` 보기와 유저플로우 `전체 보기`에서 결과를 검토합니다. AI 변경안은 승인하기 전 원본에 반영되지 않습니다.
+5. 구현할 저장소를 연결하고 Markdown·JSON·CSV·Mermaid·PDF로 내보내 Codex 또는 개발 도구에 넘깁니다.
+
+화면 오른쪽 위에서 `한국어 / English`를 선택할 수 있습니다. 영어를 선택한 뒤 새로 실행하는 Codex 생성은 제목·설명·수용 기준까지 영어로 작성합니다. 이미 저장된 한국어 프로젝트 내용은 자동 번역하지 않습니다.
 
 ## 핵심 기능
 
@@ -38,7 +52,7 @@
 
 웹·모바일 프로젝트의 PRD·기능명세·유저플로우·시스템 설계·내보내기와 데이터 분석·머신러닝 프로젝트의 문제 정의·데이터 설계·실험 파이프라인·데이터/ML 시스템 설계·실행 계획 흐름을 로컬 SQLite 리비전으로 관리합니다. Pure Black·VS Code Light·Neutral Gray·VS Code Dark 테마, 로컬 Codex/Git/GitHub CLI 상태와 프로젝트별 Git 저장소 연결을 지원합니다. 현재 구현은 개인용 로컬 프로그램에 집중하며 결제와 다중 사용자 협업은 제외합니다.
 
-최신 배포판은 **ProjectStudio 0.3.0 Beta**입니다. 데이터·ML 전용 기획 흐름, 요구사항 추적형 시스템 설계, 프로젝트별 구현 일치 검사와 전체 한글 UI 줄바꿈 정비가 포함됩니다.
+최신 소스 버전은 **ProjectStudio 0.4.0 Beta**입니다. Globeat 공개 데모, 한국어·영어 선택, Codex 출력 언어 연동과 공개 배포 흐름이 포함됩니다.
 
 새 프로젝트는 웹 서비스, 모바일 앱, 머신러닝, 데이터 분석 중 유형을 먼저 선택합니다. 선택값은 SQLite 프로젝트 원본에 저장되고 PRD·기능명세·작업 흐름·시스템 설계와 품질 검사의 기준이 됩니다. 웹·모바일 제품은 유저플로우를, 머신러닝·데이터 분석 프로젝트는 실행 파이프라인을 사용합니다. 백엔드 설계는 웹·모바일 기능명세와 시스템 설계에 필요한 구성요소로 포함합니다.
 
@@ -95,6 +109,16 @@ Codex는 각 화면 블록의 캔버스 좌표와 크기까지 반환합니다. 
 
 Rust 버전과 필수 컴포넌트는 `rust-toolchain.toml`에 고정되어 있습니다. Tauri 실행 시 SQLite 데이터베이스는 운영체제의 앱 데이터 디렉터리에 생성됩니다.
 
-## 지인 공유용 Windows 베타
+## 공개 Windows 베타
 
-`pnpm tauri build`로 NSIS `.exe`와 MSI `.msi` 설치 파일을 생성합니다. 설치형 사용자는 Node.js, pnpm이나 Rust가 필요하지 않지만 GitHub 로그인 잠금을 사용하려면 [GitHub CLI](https://cli.github.com/) 설치와 로그인이 필요합니다. Codex·Claude·Antigravity·Ollama는 선택 기능이며 설치되어 있지 않아도 프로젝트, PRD, 기능명세, 유저플로우 또는 실행 파이프라인, 시스템 설계와 내보내기를 사용할 수 있습니다.
+GitHub Releases에서 NSIS `.exe` 또는 MSI `.msi`를 누구나 내려받을 수 있습니다. 설치형 사용자는 Node.js, pnpm이나 Rust가 필요하지 않지만 GitHub 로그인 잠금을 사용하려면 [GitHub CLI](https://cli.github.com/) 설치와 로그인이 필요합니다. Codex·Claude·Antigravity·Ollama는 선택 기능이며 설치되어 있지 않아도 프로젝트, PRD, 기능명세, 유저플로우 또는 실행 파이프라인, 시스템 설계와 내보내기를 사용할 수 있습니다.
+
+## 보안과 개인정보
+
+- 프로젝트, PRD와 리비전은 사용자 PC의 SQLite에 저장되며 ProjectStudio 운영 서버로 업로드되지 않습니다.
+- GitHub·Codex 토큰을 직접 저장하지 않고, 사용자가 각 CLI에서 이미 인증한 로컬 세션을 사용합니다.
+- 공개 데모는 정적 빌드와 검토된 Globeat 예제 데이터만 포함합니다. 로컬 데이터베이스·사용자 경로·인증 정보·Tauri IPC에는 접근할 수 없습니다.
+- Codex 생성 결과는 JSON Schema, ID 참조와 최소 상세도를 검사한 뒤 저장하고, 제안 변경은 사용자가 승인해야 반영됩니다.
+- Windows 베타는 아직 코드 서명 인증서를 적용하지 않아 SmartScreen 경고가 표시될 수 있습니다. Release의 SHA-256 체크섬과 게시 저장소를 확인하세요.
+
+상세 내용은 [개인정보 처리 경계](docs/privacy.md), [공개 데모 보안 감사](docs/security-audit-2026-07-30.md), [공개 배포 안내](docs/distribution.md)를 참고하세요.

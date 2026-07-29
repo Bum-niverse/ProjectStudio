@@ -1,8 +1,11 @@
 import type { PrdRevision, ProjectWithPrd } from "../domain/project";
 import type { ProjectRepository, SavePrdRevisionInput, SaveProjectWithPrdInput } from "../ports/projectRepository";
+import { globeatDemo, isPublicDemo } from "../demo/globeatDemo";
 
 export class InMemoryProjectRepository implements ProjectRepository {
-  private readonly projects = new Map<string, ProjectWithPrd>();
+  private readonly projects = new Map<string, ProjectWithPrd>(
+    isPublicDemo ? [[globeatDemo.projectWithPrd.project.id, globeatDemo.projectWithPrd]] : [],
+  );
 
   async saveProjectWithInitialPrd(input: SaveProjectWithPrdInput): Promise<ProjectWithPrd> {
     const result: ProjectWithPrd = {

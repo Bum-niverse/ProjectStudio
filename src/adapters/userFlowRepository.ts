@@ -1,6 +1,7 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import type { UserFlowEdge, UserFlowNode } from "../domain/userFlow";
 import type { UserFlowRepository } from "../ports/userFlowRepository";
+import { globeatDemo, isGlobeatDemoProject } from "../demo/globeatDemo";
 
 class TauriUserFlowRepository implements UserFlowRepository {
   initialize(projectId: string, nodes: UserFlowNode[], edges: UserFlowEdge[],replaceExisting=false) { return invoke<{nodes:UserFlowNode[];edges:UserFlowEdge[]}>("initialize_user_flow", { input: { projectId, nodes, edges, replaceExisting,createdAt: new Date().toISOString() } }); }
@@ -10,7 +11,7 @@ class TauriUserFlowRepository implements UserFlowRepository {
   deleteNode(projectId:string,nodeId:string){return invoke<void>("delete_user_flow_node",{projectId,nodeId});}
 }
 class BrowserUserFlowRepository implements UserFlowRepository {
-  async initialize(_projectId:string,nodes:UserFlowNode[],edges:UserFlowEdge[]){return {nodes,edges};}
+  async initialize(projectId:string,nodes:UserFlowNode[],edges:UserFlowEdge[]){return isGlobeatDemoProject(projectId)?globeatDemo.userFlow:{nodes,edges};}
   async updateNode(node:UserFlowNode){return node;}
   async connect(projectId:string,sourceNodeId:string,targetNodeId:string){return {id:`flow-edge-${crypto.randomUUID()}`,projectId,sourceNodeId,targetNodeId};}
   async createNode(node:UserFlowNode){return node;}

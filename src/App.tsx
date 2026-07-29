@@ -18,12 +18,15 @@ import { SystemDesignPage } from "./SystemDesignPage";
 import { generateAndSavePlanningBundle, type PlanningGenerationResult } from "./application/planningService";
 import { DataDesignPage } from "./DataDesignPage";
 import { dataProblemSections } from "./domain/dataProblemSections";
+import { globeatDemo, isPublicDemo, resetPublicDemo } from "./demo/globeatDemo";
+import { useI18n } from "./i18n";
 
 interface GithubUser{id:number;login:string;name?:string;avatarUrl:string;isOwner:boolean}
 
 type AppPage = "project" | "prd" | "features" | "user-flow" | "system-design" | "export" | "settings";
 
 export default function App() {
+  const { locale, setLocale, t } = useI18n();
   const isVisualTest = !isTauri() && new URLSearchParams(window.location.search).get("visual-test") === "1";
   const service = useMemo(() => createProjectService(), []);
   const [page, setPage] = useState<AppPage>("project");
@@ -41,7 +44,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [saveError, setSaveError] = useState<string>();
   const [loadError, setLoadError] = useState<string>();
-  const [githubUser,setGithubUser]=useState<GithubUser | undefined>(() => isVisualTest ? { id: 128395576, login: "Bum-niverse", name: "Visual QA", avatarUrl: "", isOwner: true } : undefined);
+  const [githubUser,setGithubUser]=useState<GithubUser | undefined>(() => isVisualTest || isPublicDemo ? { id: 128395576, login: "Bum-niverse", name: isPublicDemo ? "Demo" : "Visual QA", avatarUrl: "", isOwner: true } : undefined);
   const [isAuthenticating,setIsAuthenticating]=useState(false);
   const [authMessage,setAuthMessage]=useState<string>();
   const [isDeveloperMode,setIsDeveloperMode]=useState(()=>localStorage.getItem("projectstudio:developer-mode")==="true");
@@ -58,7 +61,13 @@ export default function App() {
 
   useEffect(() => {
     if(!githubUser)return;
-    void service.listProjects().then(setProjects)
+    void service.listProjects().then((items) => {
+      setProjects(items);
+      if (isPublicDemo) {
+        setSelectedProjectId(globeatDemo.projectWithPrd.project.id);
+        setPage("features");
+      }
+    })
       .catch(() => setLoadError("저장된 프로젝트를 불러오지 못했습니다."))
       .finally(() => setIsLoading(false));
   }, [githubUser,service]);
@@ -94,7 +103,7 @@ export default function App() {
 
   function generateDetailedPlan(project: ProjectWithPrd, replaceExisting=false) {
     setPlanningState({projectId:project.project.id,status:"running",message:"PRD를 Codex CLI에 전달해 기능명세·유저플로우·시스템 설계를 생성하고 있습니다."});
-    void generateAndSavePlanningBundle({projectId:project.project.id,projectName:project.project.name,projectType:project.project.projectType,projectSubtype:project.project.projectSubtype,sourceDocumentId:project.prd.documentId,prdMarkdown:project.prd.contentMarkdown,replaceExisting})
+    void generateAndSavePlanningBundle({projectId:project.project.id,projectName:project.project.name,projectType:project.project.projectType,projectSubtype:project.project.projectSubtype,sourceDocumentId:project.prd.documentId,prdMarkdown:project.prd.contentMarkdown,replaceExisting,locale})
       .then(result=>setPlanningState({projectId:project.project.id,status:"success",result,message:"Codex 상세 기획을 로컬 작업대에 저장했습니다."}))
       .catch(error=>setPlanningState({projectId:project.project.id,status:"error",message:`${error instanceof Error?error.message:String(error)} PRD는 저장됐습니다. 하위 산출물 상태를 확인한 뒤 다시 실행할 수 있습니다.`}));
   }
@@ -131,7 +140,16 @@ export default function App() {
       <header className="topbar">
         <div className="brand-mark">PS</div>
         <div><p className="eyebrow">LOCAL PRODUCT WORKSPACE</p><h1>ProjectStudio</h1></div>
-        <div className="topbar-actions"><span className="github-user-badge">@{githubUser.login}</span>{githubUser.isOwner&&<button className={isDeveloperMode?"developer-mode-toggle active":"developer-mode-toggle"} onClick={handleDeveloperMode} type="button">개발자 모드 {isDeveloperMode?"ON":"OFF"}</button>}<span className="mode-badge">{githubUser.isOwner&&isDeveloperMode?(window.location.port==="1420"?"실시간 반영 연결됨":"개발 빌드에서 실시간 반영"):"로컬 저장 · 외부 전송 없음"}</span><button onClick={handleOpenSettings} type="button" aria-label="설정 열기">⚙ 설정</button><button onClick={handleLock} type="button">잠금</button></div>
+        <div className="topbar-actions">
+          {isPublicDemo && <span className="demo-badge">{t("demo")}</span>}
+          <label className="language-picker"><span className="sr-only">Language</span><select aria-label="Language" onChange={(event)=>setLocale(event.target.value as "ko"|"en")} value={locale}><option value="ko">한국어</option><option value="en">English</option></select></label>
+          {isPublicDemo && <button onClick={resetPublicDemo} type="button">{t("resetDemo")}</button>}
+          <span className="github-user-badge">@{githubUser.login}</span>
+          {!isPublicDemo&&githubUser.isOwner&&<button className={isDeveloperMode?"developer-mode-toggle active":"developer-mode-toggle"} onClick={handleDeveloperMode} type="button">개발자 모드 {isDeveloperMode?"ON":"OFF"}</button>}
+          <span className="mode-badge">{isPublicDemo?t("localOnly"):githubUser.isOwner&&isDeveloperMode?(window.location.port==="1420"?"실시간 반영 연결됨":"개발 빌드에서 실시간 반영"):"로컬 저장 · 외부 전송 없음"}</span>
+          {!isPublicDemo&&<button onClick={handleOpenSettings} type="button" aria-label="설정 열기">⚙ {t("settings")}</button>}
+          {!isPublicDemo&&<button onClick={handleLock} type="button">잠금</button>}
+        </div>
       </header>
 
       {page !== "settings" && <nav className="page-progress" aria-label="제품 개발 단계">
@@ -154,8 +172,8 @@ export default function App() {
         <section className="full-page project-create-page">
           <div className="page-intro">
             <p className="eyebrow">01 · NEW PROJECT</p>
-            <h2>아이디어에서 시작합니다.</h2>
-            <p>프로젝트 유형, 이름과 핵심 아이디어를 기준으로 필요한 기획 단계를 구성합니다.</p>
+            <h2>{t("projectIntro")}</h2>
+            <p>{t("projectIntroBody")}</p>
           </div>
           <div className="project-page-grid">
             <form className="project-create-form" onSubmit={handleSubmit} noValidate>
@@ -173,8 +191,8 @@ export default function App() {
               <button type="submit" disabled={isSaving}>{isSaving ? "프로젝트 생성 중…" : "프로젝트 만들고 PRD로 이동"}</button>
             </form>
             <aside className="recent-projects">
-              <p className="eyebrow">RECENT PROJECTS</p><h3>기존 프로젝트</h3>
-              {isLoading ? <p>불러오는 중…</p> : loadError ? <p className="field-error">{loadError}</p> : projects.length === 0 ? <p>아직 저장된 프로젝트가 없습니다.</p> : projects.map(({ project }) => (
+              <p className="eyebrow">RECENT PROJECTS</p><h3>{t("recentProjects")}</h3>
+              {isLoading ? <p>{t("loading")}</p> : loadError ? <p className="field-error">{loadError}</p> : projects.length === 0 ? <p>{t("noProjects")}</p> : projects.map(({ project }) => (
                 <button key={project.id} onClick={() => handleOpenProject(project.id)} type="button"><strong>{project.name}</strong><small>{projectTypeLabel(project.projectType)}</small><span>{project.idea}</span></button>
               ))}
             </aside>

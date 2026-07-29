@@ -16,6 +16,7 @@ import { FeatureDocumentView } from "./FeatureDocumentView";
 import { FeatureEditor } from "./FeatureDocumentView";
 import { FeatureNodeCard, type FeatureNodeData } from "./FeatureNodeCard";
 import { FeatureProposalPanel } from "./FeatureProposalPanel";
+import { useI18n } from "./i18n";
 
 type ViewMode = "tree" | "mindmap";
 type WorkspaceViewMode = "document" | ViewMode;
@@ -118,6 +119,7 @@ export function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:
 }
 
 export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIdea }: FeatureMapProps) {
+  const { t } = useI18n();
   const repository = useMemo(() => createFeatureRepository(), []);
   const generatedFeatures = useMemo(() => createDevelopmentFeatureSpec(projectId, projectName,projectIdea), [projectId, projectName,projectIdea]);
   const [features, setFeatures] = useState(generatedFeatures);
@@ -222,10 +224,10 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIde
       <div className="feature-map-header">
         <div><p className="eyebrow">03 · FEATURE SPECIFICATION</p><h5>계층형 기능명세</h5><small>{persistenceMessage}</small></div>
         <div className="view-switch" aria-label="기능명세 보기 방식">
-          <button className={mode === "document" ? "selected" : ""} onClick={() => setMode("document")} type="button">문서</button>
-          <button className={mode === "tree" ? "selected" : ""} onClick={() => setMode("tree")} type="button">트리</button>
-          <button className={mode === "mindmap" ? "selected" : ""} onClick={() => setMode("mindmap")} type="button">마인드맵</button>
-          <button className="proposal-open-button" onClick={() => setIsProposalPanelOpen(true)} type="button">AI 변경안</button>
+          <button className={mode === "document" ? "selected" : ""} onClick={() => setMode("document")} type="button">{t("document")}</button>
+          <button className={mode === "tree" ? "selected" : ""} onClick={() => setMode("tree")} type="button">{t("tree")}</button>
+          <button className={mode === "mindmap" ? "selected" : ""} onClick={() => setMode("mindmap")} type="button">{t("mindmap")}</button>
+          <button className="proposal-open-button" onClick={() => setIsProposalPanelOpen(true)} type="button">{t("aiProposal")}</button>
         </div>
       </div>
       {mode === "tree"&&<nav aria-label="기능명세 대주제 시트" className="feature-tree-sheet-tabs"><button aria-current={activeBranchId==="all"?"page":undefined} className={activeBranchId==="all"?"selected":""} onClick={()=>setActiveBranchId("all")} type="button">전체 기능</button>{majorFeatures.map(feature=><button aria-current={activeBranchId===feature.id?"page":undefined} className={activeBranchId===feature.id?"selected":""} key={feature.id} onClick={()=>setActiveBranchId(feature.id)} type="button">{feature.title}</button>)}</nav>}
