@@ -4,6 +4,8 @@
 
 설치형 ProjectStudio는 Node.js, pnpm, Rust와 개발 소스가 필요하지 않다. GitHub 로그인 잠금을 사용하려면 GitHub CLI가 필요하다.
 
+처음 설치하는 사용자의 전체 순서는 [Windows 설치 및 사용 가이드](getting-started.md)에 정리한다.
+
 ```powershell
 winget install --id GitHub.cli
 gh auth login --hostname github.com --web --git-protocol https

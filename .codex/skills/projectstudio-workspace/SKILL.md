@@ -23,13 +23,13 @@ Use `-Mode Dev` only when the user asks for live code changes or developer mode.
 6. Keep ProjectStudio local-first. Authentication does not imply SQLite encryption or cloud sync.
 7. Update relevant product/progress documentation for verified behavior.
 8. Run proportional checks. For a full change use `pnpm lint`, `pnpm test`, `pnpm build`, `cargo fmt --check --manifest-path src-tauri/Cargo.toml`, and `cargo test --manifest-path src-tauri/Cargo.toml`.
-9. Commit only intended files and push the private `origin` after checks pass unless the user asks not to publish.
+9. Commit only intended files and push the public `origin` after checks pass unless the user asks not to publish.
 
 Use the bundled Codex Node/pnpm runtime when `pnpm` is unavailable in `PATH`.
 
 ## Package and share
 
-Build Windows bundles with `pnpm tauri build`. Prefer the NSIS setup EXE for friends and keep MSI as an alternative. Upload binaries to a private GitHub Release rather than committing them to Git history. State that unsigned packages can trigger Windows SmartScreen.
+Build Windows bundles with `pnpm tauri build`. Prefer the NSIS setup EXE for general Windows installation and keep MSI as an alternative. Upload binaries and SHA-256 checksums to the public GitHub Release rather than committing them to Git history. State that unsigned packages can trigger Windows SmartScreen.
 
 ## Data and tool boundaries
 

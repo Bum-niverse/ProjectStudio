@@ -24,6 +24,14 @@
 - `pnpm audit --audit-level=moderate`
 - Git diff 비밀정보 패턴 검사
 
+## 2026-07-30 공개 사용 안내 재검증
+
+- `pnpm audit --audit-level=moderate` 결과 알려진 취약점 0건을 다시 확인했다.
+- 추적 파일에서 GitHub·OpenAI·AWS credential 및 private key 패턴이 발견되지 않았다.
+- `.env`, SQLite DB, credential·secret 이름의 민감 파일이 Git 추적 대상에 포함되지 않았다.
+- 공개 v0.4.0 Release에 NSIS·MSI와 SHA-256 체크섬이 함께 게시된 것을 확인했다.
+- 설치 가이드에 GitHub CLI 인증, 선택적 Codex 인증, Codex 전송 범위와 SmartScreen 잔여 위험을 명시했다.
+
 ## 잔여 위험
 
 - GitHub Pages는 저장소에서 사용자 지정 응답 헤더를 구성할 수 없어 데스크톱 Tauri CSP와 동일한 응답 CSP를 보장하지 않는다. 데모는 정적 same-origin asset만 사용하고 사용자 HTML을 삽입하지 않는다.

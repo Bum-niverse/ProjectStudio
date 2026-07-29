@@ -12,7 +12,11 @@
 
 > 실제 ProjectStudio에 저장된 Globeat 샘플 작업공간으로 촬영한 데모입니다.
 
-## 3분 사용법
+## 처음 시작하기
+
+처음 설치하는 사용자는 [Windows 설치 및 사용 가이드](docs/getting-started.md)를 먼저 읽어 주세요. 설치 파일 확인, GitHub CLI 로그인, 선택적인 Codex CLI 연결과 첫 프로젝트 생성까지 순서대로 설명합니다.
+
+### 3분 사용법
 
 1. Windows 설치 파일을 설치하고 [GitHub CLI](https://cli.github.com/)로 로그인합니다.
 2. 아이디어와 프로젝트 유형을 입력하면 ProjectStudio가 PRD 초안을 로컬 SQLite에 먼저 저장합니다.
@@ -69,6 +73,7 @@
 - [Codex 동기화 계약](docs/codex-sync-contract.md)
 - [UI/UX 설계 및 검수 기준](docs/ui-ux-guidelines.md)
 - [로컬 데이터와 개인정보](docs/privacy.md)
+- [Windows 설치 및 사용 가이드](docs/getting-started.md)
 - [Windows 베타 배포 및 업데이트](docs/distribution.md)
 - [ProjectStudio Codex 스킬](.codex/skills/projectstudio-workspace/SKILL.md)
 
