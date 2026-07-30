@@ -1,5 +1,7 @@
 # ProjectStudio
 
+[English](README.en.md)
+
 개인 프로젝트의 아이디어를 PRD, 기능명세, 유저플로우 또는 실행 파이프라인, 시스템 설계로 발전시키고 실제 코드·커밋·테스트·완료 상태까지 추적하는 로컬 우선 데스크톱 프로그램입니다.
 
 [Globeat 공개 데모 열기](https://bum-niverse.github.io/ProjectStudio/) · [최신 Windows 설치 파일](https://github.com/Bum-niverse/ProjectStudio/releases/latest)
