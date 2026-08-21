@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { createDevelopmentFeatureSpec } from "./feature";
-import { createExecutionPipelineSpec, createUserFlowSpec, isIncompleteGeneratedFlow, reconcileUserFlowLanes } from "./userFlow";
+import { createExecutionPipelineSpec, createUserFlowSpec, isIncompleteGeneratedFlow, reconcileUserFlowLanes, summarizeUserFlowCompletion } from "./userFlow";
 
 describe("createUserFlowSpec",()=>{
+  it("완료된 워크플로 단계 수와 진행률을 계산한다",()=>{
+    expect(summarizeUserFlowCompletion([])).toEqual({total:0,completed:0,percent:0});
+    const nodes=createExecutionPipelineSpec("progress",[],"data_analysis","eda").nodes.slice(0,4).map((node,index)=>({...node,isCompleted:index<2}));
+    expect(summarizeUserFlowCompletion(nodes)).toEqual({total:4,completed:2,percent:50});
+  });
   it("새 데이터 프로젝트는 ProjectStudio 기능이 아닌 아이디어 기반 흐름을 만든다",()=>{
     const projectId="stock-project";const features=createDevelopmentFeatureSpec(projectId,"주가 방향 예측기","과거 주가 데이터와 이동평균으로 다음 거래일 상승·하락을 분류하고 백테스트한다.");
     expect(features.some(feature=>feature.title==="데이터 수집과 품질 관리")).toBe(true);

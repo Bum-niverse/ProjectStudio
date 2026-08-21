@@ -2,10 +2,12 @@ import type { FeatureSpec, NodeColorKey } from "./feature";
 import type { ProjectSubtype, ProjectType } from "./project";
 
 export type UserFlowNodeKind="phase"|"screen"|"action"|"result"|"decision";
-export interface UserFlowNode{id:string;projectId:string;laneId:string;title:string;description:string;kind:UserFlowNodeKind;positionX:number;positionY:number;colorKey?:NodeColorKey;depth?:number;parentId?:string;linkedFeatureIds?:string[];branchCondition?:string;inputArtifacts?:string[];outputArtifacts?:string[];methods?:string[];validation?:string;failureHandling?:string;codePaths?:string[];testPaths?:string[];completionCriteria?:string}
+export interface UserFlowNode{id:string;projectId:string;laneId:string;title:string;description:string;kind:UserFlowNodeKind;positionX:number;positionY:number;colorKey?:NodeColorKey;depth?:number;parentId?:string;linkedFeatureIds?:string[];branchCondition?:string;inputArtifacts?:string[];outputArtifacts?:string[];methods?:string[];validation?:string;failureHandling?:string;codePaths?:string[];testPaths?:string[];completionCriteria?:string;isCompleted?:boolean}
 export interface UserFlowEdge{id:string;projectId:string;sourceNodeId:string;targetNodeId:string}
 export interface UserFlowLane{id:string;title:string;requirementId?:string;order?:number;positionY:number;height:number;colorKey?:NodeColorKey}
 export interface UserFlowSpec{nodes:UserFlowNode[];edges:UserFlowEdge[];lanes:UserFlowLane[]}
+export interface UserFlowCompletionSummary{total:number;completed:number;percent:number}
+export function summarizeUserFlowCompletion(nodes:UserFlowNode[]):UserFlowCompletionSummary{const completed=nodes.filter(node=>node.isCompleted).length;return{total:nodes.length,completed,percent:nodes.length?Math.round(completed/nodes.length*100):0};}
 export const isLegacyPipelineNodeId=(id:string):boolean=>/^pipeline-\d+-\d+$/u.test(id);
 
 export function isIncompleteGeneratedFlow(storedNodes:UserFlowNode[],generatedNodes:UserFlowNode[]):boolean{

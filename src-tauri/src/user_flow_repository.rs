@@ -40,10 +40,12 @@ pub struct UserFlowNode {
     test_paths: Vec<String>,
     #[serde(default)]
     completion_criteria: Option<String>,
+    #[serde(default)]
+    is_completed: bool,
 }
 
 #[derive(Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", default)]
 struct ExecutionMetadata {
     input_artifacts: Vec<String>,
     output_artifacts: Vec<String>,
@@ -53,6 +55,8 @@ struct ExecutionMetadata {
     code_paths: Vec<String>,
     test_paths: Vec<String>,
     completion_criteria: Option<String>,
+    #[serde(default)]
+    is_completed: bool,
 }
 fn metadata(node: &UserFlowNode) -> Result<String, String> {
     serde_json::to_string(&ExecutionMetadata {
@@ -64,6 +68,7 @@ fn metadata(node: &UserFlowNode) -> Result<String, String> {
         code_paths: node.code_paths.clone(),
         test_paths: node.test_paths.clone(),
         completion_criteria: node.completion_criteria.clone(),
+        is_completed: node.is_completed,
     })
     .map_err(|error| error.to_string())
 }
@@ -178,6 +183,7 @@ async fn list_spec(
                 code_paths: execution.code_paths,
                 test_paths: execution.test_paths,
                 completion_criteria: execution.completion_criteria,
+                is_completed: execution.is_completed,
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
@@ -340,4 +346,23 @@ pub async fn connect_user_flow_nodes(
         source_node_id: input.source_node_id,
         target_node_id: input.target_node_id,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ExecutionMetadata;
+
+    #[test]
+    fn completion_metadata_defaults_to_incomplete_and_round_trips() {
+        let legacy: ExecutionMetadata = serde_json::from_str("{}").expect("legacy metadata");
+        assert!(!legacy.is_completed);
+
+        let completed = ExecutionMetadata {
+            is_completed: true,
+            ..ExecutionMetadata::default()
+        };
+        let encoded = serde_json::to_string(&completed).expect("encode metadata");
+        let decoded: ExecutionMetadata = serde_json::from_str(&encoded).expect("decode metadata");
+        assert!(decoded.is_completed);
+    }
 }
