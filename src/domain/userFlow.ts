@@ -16,22 +16,13 @@ export function isIncompleteGeneratedFlow(storedNodes:UserFlowNode[],generatedNo
   return storedNodes.every(node=>generatedIds.has(node.id)||isLegacyPipelineNodeId(node.id));
 }
 
-export function reconcileUserFlowLanes(nodes:UserFlowNode[],generatedLanes:UserFlowLane[],features:FeatureSpec[]=[]):{nodes:UserFlowNode[];lanes:UserFlowLane[];didRemap:boolean}{
+export function reconcileUserFlowLanes(nodes:UserFlowNode[],generatedLanes:UserFlowLane[]):{nodes:UserFlowNode[];lanes:UserFlowLane[];didRemap:boolean}{
   const persistedLaneIds=[...new Set(nodes.map(node=>node.laneId))];
   if(!nodes.length)return{nodes,lanes:generatedLanes,didRemap:false};
   const orderedPersisted=persistedLaneIds.sort((left,right)=>Math.min(...nodes.filter(node=>node.laneId===left).map(node=>node.positionY))-Math.min(...nodes.filter(node=>node.laneId===right).map(node=>node.positionY)));
-  const generatedById=new Map(generatedLanes.map(lane=>[lane.id,lane]));const featureById=new Map(features.map(feature=>[feature.id,feature]));const root=features.find(feature=>!feature.parentId);const topLevelIds=new Set(features.filter(feature=>feature.parentId===root?.id).map(feature=>feature.id));
-  const topLevelFeatureId=(featureId:string):string|undefined=>{let current=featureById.get(featureId);const visited=new Set<string>();while(current&&!visited.has(current.id)){visited.add(current.id);if(topLevelIds.has(current.id))return current.id;if(!current.parentId)return;current=featureById.get(current.parentId);}return;};
-  const exactLaneIds=new Set(orderedPersisted.filter(id=>generatedById.has(id)||topLevelIds.has(id)));const usedLaneIds=new Set<string>();const laneMap=new Map<string,string>();
-  for(const persistedId of orderedPersisted){
-    let targetId=generatedById.has(persistedId)||topLevelIds.has(persistedId)?persistedId:undefined;
-    if(!targetId){const votes=new Map<string,number>();for(const node of nodes.filter(item=>item.laneId===persistedId))for(const featureId of node.linkedFeatureIds??[]){const topId=topLevelFeatureId(featureId);if(topId)votes.set(topId,(votes.get(topId)??0)+1);}const ranked=[...votes.entries()].sort((left,right)=>right[1]-left[1]);if(ranked[0]&&ranked[0][1]>(ranked[1]?.[1]??0))targetId=ranked[0][0];}
-    if(!targetId||usedLaneIds.has(targetId)||targetId!==persistedId&&exactLaneIds.has(targetId))targetId=persistedId;
-    usedLaneIds.add(targetId);laneMap.set(persistedId,targetId);
-  }
-  const reconciledNodes=nodes.map(node=>{const laneId=laneMap.get(node.laneId)??node.laneId;return laneId===node.laneId?node:{...node,laneId};});
-  const lanes=orderedPersisted.map((persistedId,index)=>{const id=laneMap.get(persistedId)??persistedId;const laneNodes=reconciledNodes.filter(node=>node.laneId===id);const minY=Math.min(...laneNodes.map(node=>node.positionY));const maxY=Math.max(...laneNodes.map(node=>node.positionY));const phase=laneNodes.find(node=>node.kind==="phase");const feature=featureById.get(id);const generated=generatedById.get(id);return{id,title:feature?.title??generated?.title??phase?.title??`분석 단계 ${index+1}`,requirementId:feature?.id??generated?.requirementId,order:index,positionY:Math.max(0,minY-100),height:Math.max(240,maxY-minY+200),colorKey:phase?.colorKey??generated?.colorKey??laneNodes[0]?.colorKey};});
-  return{nodes:reconciledNodes,lanes,didRemap:reconciledNodes.some((node,index)=>node.laneId!==nodes[index].laneId)};
+  const generatedById=new Map(generatedLanes.map(lane=>[lane.id,lane]));
+  const lanes=orderedPersisted.map((id,index)=>{const laneNodes=nodes.filter(node=>node.laneId===id);const minY=Math.min(...laneNodes.map(node=>node.positionY));const maxY=Math.max(...laneNodes.map(node=>node.positionY));const phase=laneNodes.find(node=>node.kind==="phase");const generated=generatedById.get(id);return{id,title:phase?.title??generated?.title??`사용 흐름 ${index+1}`,requirementId:generated?.requirementId,order:index,positionY:Math.max(0,minY-100),height:Math.max(240,maxY-minY+200),colorKey:phase?.colorKey??generated?.colorKey??laneNodes[0]?.colorKey};});
+  return{nodes,lanes,didRemap:false};
 }
 
 export function connectedUserFlowNodeIds(edges:UserFlowEdge[],originId:string,depth=2):Set<string>{

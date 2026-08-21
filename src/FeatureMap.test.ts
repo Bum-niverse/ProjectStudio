@@ -1,8 +1,22 @@
 import {describe,expect,it} from "vitest";
 import {layoutFeatures} from "./FeatureMap";
-import {createDevelopmentFeatureSpec} from "./domain/feature";
+import {createDevelopmentFeatureSpec,summarizeFeatureCompletion} from "./domain/feature";
 
 describe("feature tree layout",()=>{
+  it("기능 완료와 수용 기준 충족을 별도 개발 지표로 계산한다",()=>{
+    const features=createDevelopmentFeatureSpec("summary-project","업무 기록 도구","기록을 저장한다.").slice(0,2).map((feature,index)=>({
+      ...feature,
+      status:index===0?"done" as const:"in_progress" as const,
+      acceptanceCriteria:feature.acceptanceCriteria.map((criterion,criterionIndex)=>({...criterion,isMet:index===0||criterionIndex===0})),
+    }));
+    const summary=summarizeFeatureCompletion(features);
+    expect(summary.total).toBe(2);
+    expect(summary.done).toBe(1);
+    expect(summary.featurePercent).toBe(50);
+    expect(summary.criteriaMet).toBeGreaterThan(0);
+    expect(summary.criteriaPercent).toBeGreaterThan(0);
+  });
+
   it("기본 정렬은 좁은 정렬보다 연결 관계를 넓게 펼친다",()=>{
     const features=createDevelopmentFeatureSpec("layout-project","업무 기록 도구","사용자가 기록을 만들고 저장한 결과를 다시 확인한다.");
     const expanded=layoutFeatures(features,"tree","default");

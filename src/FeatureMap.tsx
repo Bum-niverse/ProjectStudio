@@ -9,7 +9,7 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { createDevelopmentFeatureSpec, NODE_COLORS, type FeatureSpec, type NodeColorKey } from "./domain/feature";
+import { createDevelopmentFeatureSpec, NODE_COLORS, summarizeFeatureCompletion, type FeatureSpec, type NodeColorKey } from "./domain/feature";
 import { createFeatureRepository } from "./adapters/featureRepository";
 import { FeatureDocumentView } from "./FeatureDocumentView";
 import { FeatureEditor } from "./FeatureDocumentView";
@@ -124,6 +124,7 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIde
   const [activeBranchId,setActiveBranchId]=useState<string>("all");
   const mapMode: ViewMode = mode === "mindmap" ? "mindmap" : "tree";
   const rootFeature=features.find(feature=>!feature.parentId);
+  const completionSummary=useMemo(()=>summarizeFeatureCompletion(features),[features]);
   const majorFeatures=features.filter(feature=>feature.parentId===rootFeature?.id).sort((a,b)=>a.sortOrder-b.sortOrder);
   const visibleFeatures=useMemo(()=>mode==="tree"&&activeBranchId!=="all"?descendantsOf(features,activeBranchId):features,[activeBranchId,features,mode]);
   const defaultNodes = useMemo(() => layoutFeatures(visibleFeatures, mapMode,layoutDensity,activeBranchId!=="all"?activeBranchId:undefined), [activeBranchId,layoutDensity,mapMode,visibleFeatures]);
@@ -217,6 +218,12 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIde
     <section className="feature-map-section">
       <div className="feature-map-header">
         <div><p className="eyebrow">03 · FEATURE SPECIFICATION</p><h5>계층형 기능명세</h5><small>{persistenceMessage}</small></div>
+        <div className="feature-completion-summary" aria-label={`기능 완료 ${completionSummary.done}/${completionSummary.total}, 수용 기준 충족 ${completionSummary.criteriaMet}/${completionSummary.criteriaTotal}`}>
+          <span>개발 기능</span><strong>{completionSummary.done}/{completionSummary.total}개 완료 · {completionSummary.featurePercent}%</strong>
+          <progress aria-label="기능명세 개발 완료율" max={completionSummary.total||1} value={completionSummary.done}/>
+          <span>수용 기준</span><strong>{completionSummary.criteriaMet}/{completionSummary.criteriaTotal}개 충족 · {completionSummary.criteriaPercent}%</strong>
+          <progress aria-label="수용 기준 충족률" max={completionSummary.criteriaTotal||1} value={completionSummary.criteriaMet}/>
+        </div>
         <div className="view-switch" aria-label="기능명세 보기 방식">
           <button className={mode === "document" ? "selected" : ""} onClick={() => setMode("document")} type="button">{t("document")}</button>
           <button className={mode === "tree" ? "selected" : ""} onClick={() => setMode("tree")} type="button">{t("tree")}</button>

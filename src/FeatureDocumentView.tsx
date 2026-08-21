@@ -15,6 +15,14 @@ export function FeatureEditor({ feature, onSave }: { feature: FeatureSpec; onSav
     setDraft((current) => ({ ...current, acceptanceCriteria: current.acceptanceCriteria.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item) }));
   }
 
+  async function handleCriterionCheck(index: number, isMet: boolean) {
+    const updated = { ...draft, acceptanceCriteria: draft.acceptanceCriteria.map((item, itemIndex) => itemIndex === index ? { ...item, isMet } : item) };
+    setDraft(updated);
+    setMessage("수용 기준 체크를 저장하는 중…");
+    try { await onSave(updated); setMessage(isMet ? "수용 기준 충족을 저장했습니다." : "수용 기준 체크를 해제했습니다."); }
+    catch { setMessage("수용 기준 체크를 저장하지 못했습니다. 선택은 유지됩니다."); }
+  }
+
   function addCriterion() {
     setDraft((current) => ({ ...current, acceptanceCriteria: [...current.acceptanceCriteria, { id: `${current.id}-ac-${crypto.randomUUID()}`, description: "", isMet: false, sortOrder: current.acceptanceCriteria.length }] }));
   }
@@ -39,7 +47,7 @@ export function FeatureEditor({ feature, onSave }: { feature: FeatureSpec; onSav
     <div className="node-color-palette" aria-label="노드 색상">{NODE_COLORS.map((color) => <button aria-label={`${color.label} 색상`} className={draft.colorKey === color.key ? "selected" : ""} key={color.key} onClick={() => void handleColorChange(color.key)} style={{ "--node-color": color.color } as CSSProperties} type="button" />)}</div>
     <label className="document-section">설명<textarea rows={5} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
     <section className="criteria-section"><div><h4>수용 기준</h4><button className="secondary" onClick={addCriterion} type="button">+ 기준 추가</button></div>
-      {draft.acceptanceCriteria.map((criterion, index) => <div className="criterion-row" key={criterion.id}><input type="checkbox" checked={criterion.isMet} onChange={(event) => updateCriterion(index, { isMet: event.target.checked })} /><textarea rows={2} value={criterion.description} onChange={(event) => updateCriterion(index, { description: event.target.value })} /><button onClick={() => setDraft((current) => ({ ...current, acceptanceCriteria: current.acceptanceCriteria.filter((_, itemIndex) => itemIndex !== index) }))} type="button">×</button></div>)}
+      {draft.acceptanceCriteria.map((criterion, index) => <div className="criterion-row" key={criterion.id}><input aria-label={`수용 기준 ${index+1} 충족`} type="checkbox" checked={criterion.isMet} onChange={(event) => void handleCriterionCheck(index, event.currentTarget.checked)} /><textarea aria-label={`수용 기준 ${index+1}`} rows={2} value={criterion.description} onChange={(event) => updateCriterion(index, { description: event.target.value })} /><button aria-label={`수용 기준 ${index+1} 삭제`} onClick={() => setDraft((current) => ({ ...current, acceptanceCriteria: current.acceptanceCriteria.filter((_, itemIndex) => itemIndex !== index) }))} type="button">×</button></div>)}
     </section>
     {message && <p className="document-save-message" aria-live="polite">{message}</p>}
   </div>;
@@ -55,8 +63,8 @@ export function FeatureDocumentView({ features, onSave }: FeatureDocumentViewPro
 
   function selectRequirement(id: string) { setRequirementId(id); setFeatureId(features.find((feature) => feature.parentId === id)?.id ?? id); }
   return <div className="document-view">
-    <aside className="document-column"><header><h4>요구사항</h4><button type="button">+</button></header>{requirements.map((feature, index) => <button className={requirementId === feature.id ? "selected" : ""} key={feature.id} onClick={() => selectRequirement(feature.id)} type="button"><span>{index + 1}</span><strong>{feature.title}</strong><small>{features.filter((item) => item.parentId === feature.id).length}</small></button>)}</aside>
-    <aside className="document-column"><header><h4>기능 / 상세 기능</h4><button type="button">+</button></header>{details.map((feature, index) => <button className={selected?.id === feature.id ? "selected" : ""} key={feature.id} onClick={() => setFeatureId(feature.id)} type="button"><span>{index + 1}</span><strong>{feature.title}</strong><small>{feature.acceptanceCriteria.length}</small></button>)}</aside>
+    <aside className="document-column"><header><h4>요구사항</h4><button aria-label="요구사항 추가" type="button">+</button></header>{requirements.map((feature, index) => <button className={requirementId === feature.id ? "selected" : ""} key={feature.id} onClick={() => selectRequirement(feature.id)} type="button"><span>{feature.status==="done"?"✓":index+1}</span><strong>{feature.title}</strong><small>{features.filter((item) => item.parentId === feature.id).length}</small></button>)}</aside>
+    <aside className="document-column"><header><h4>기능 / 상세 기능</h4><button aria-label="상세 기능 추가" type="button">+</button></header>{details.map((feature, index) => {const met=feature.acceptanceCriteria.filter(item=>item.isMet).length;return <button className={selected?.id === feature.id ? "selected" : ""} key={feature.id} onClick={() => setFeatureId(feature.id)} type="button"><span>{feature.status==="done"?"✓":index+1}</span><strong>{feature.title}</strong><small>{met}/{feature.acceptanceCriteria.length}</small></button>;})}</aside>
     <main className="document-detail">{selected ? <FeatureEditor key={selected.id} feature={selected} onSave={onSave} /> : <p>편집할 기능을 선택해 주세요.</p>}</main>
   </div>;
 }

@@ -35,30 +35,12 @@ describe("createUserFlowSpec",()=>{
     expect(reconciled.didRemap).toBe(false);
     expect(reconciled.lanes.map(lane=>lane.id)).toEqual(["prepare","quality","analysis","report"]);
   });
-  it("연결된 기능명세를 따라 저장 레인을 실제 최상위 대분류로 복원한다",()=>{
-    const features=[
-      {id:"root",title:"투자 프로젝트",description:"",status:"planned" as const,priority:"high" as const,role:"사용자",sortOrder:0,acceptanceCriteria:[]},
-      {id:"req-research",parentId:"root",title:"백테스트 연구",description:"",status:"planned" as const,priority:"high" as const,role:"연구원",sortOrder:10,acceptanceCriteria:[]},
-      {id:"research-run",parentId:"req-research",title:"백테스트 실행",description:"",status:"planned" as const,priority:"high" as const,role:"연구원",sortOrder:10,acceptanceCriteria:[]},
-    ];
-    const persisted:import("./userFlow").UserFlowNode[]=[{id:"flow-research",projectId:"project",laneId:"legacy-research",title:"연구 시작",description:"",kind:"phase",positionX:90,positionY:120,linkedFeatureIds:["research-run"]}];
-    const reconciled=reconcileUserFlowLanes(persisted,[],features);
-    expect(reconciled.didRemap).toBe(true);
-    expect(reconciled.nodes[0].laneId).toBe("req-research");
-    expect(reconciled.lanes[0].title).toBe("백테스트 연구");
-  });
-  it("실제 대분류 레인이 이미 있으면 사용자 정의 레인을 합쳐 버리지 않는다",()=>{
-    const features=[
-      {id:"root",title:"프로젝트",description:"",status:"planned" as const,priority:"high" as const,role:"사용자",sortOrder:0,acceptanceCriteria:[]},
-      {id:"req-risk",parentId:"root",title:"위험 관리",description:"",status:"planned" as const,priority:"high" as const,role:"사용자",sortOrder:10,acceptanceCriteria:[]},
-    ];
-    const persisted:import("./userFlow").UserFlowNode[]=[
-      {id:"legacy",projectId:"project",laneId:"legacy-risk",title:"별도 위험 흐름",description:"",kind:"phase",positionX:90,positionY:100,linkedFeatureIds:["req-risk"]},
-      {id:"current",projectId:"project",laneId:"req-risk",title:"현재 위험 흐름",description:"",kind:"phase",positionX:90,positionY:400,linkedFeatureIds:["req-risk"]},
-    ];
-    const reconciled=reconcileUserFlowLanes(persisted,[],features);
-    expect(reconciled.nodes.map(node=>node.laneId)).toEqual(["legacy-risk","req-risk"]);
-    expect(new Set(reconciled.lanes.map(lane=>lane.id)).size).toBe(2);
+  it("기능명세 추적 링크가 사용자 시나리오 레인 소속을 바꾸지 않는다",()=>{
+    const persisted:import("./userFlow").UserFlowNode[]=[{id:"flow-research",projectId:"project",laneId:"research-journey",title:"연구 요청부터 결과 확인",description:"",kind:"phase",positionX:90,positionY:120,linkedFeatureIds:["req-backtest-engine"]}];
+    const reconciled=reconcileUserFlowLanes(persisted,[{id:"req-backtest-engine",title:"백테스트 엔진",positionY:0,height:250}]);
+    expect(reconciled.didRemap).toBe(false);
+    expect(reconciled.nodes[0].laneId).toBe("research-journey");
+    expect(reconciled.lanes[0].title).toBe("연구 요청부터 결과 확인");
   });
   it("기본 단계 일부만 남은 실행 파이프라인을 불완전 상태로 판정한다",()=>{
     const generated=createExecutionPipelineSpec("analysis",[],"data_analysis","eda");

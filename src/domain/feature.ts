@@ -25,6 +25,29 @@ export interface AcceptanceCriterion {
   sortOrder: number;
 }
 
+export interface FeatureCompletionSummary {
+  total: number;
+  done: number;
+  featurePercent: number;
+  criteriaTotal: number;
+  criteriaMet: number;
+  criteriaPercent: number;
+}
+
+export function summarizeFeatureCompletion(features: FeatureSpec[]): FeatureCompletionSummary {
+  const done = features.filter((feature) => feature.status === "done").length;
+  const criteria = features.flatMap((feature) => feature.acceptanceCriteria);
+  const criteriaMet = criteria.filter((criterion) => criterion.isMet).length;
+  return {
+    total: features.length,
+    done,
+    featurePercent: features.length ? Math.round((done / features.length) * 100) : 0,
+    criteriaTotal: criteria.length,
+    criteriaMet,
+    criteriaPercent: criteria.length ? Math.round((criteriaMet / criteria.length) * 100) : 0,
+  };
+}
+
 function criteria(featureId: string, descriptions: string[]): AcceptanceCriterion[] {
   return descriptions.map((description, index) => ({ id: `${featureId}-ac-${index + 1}`, description, isMet: false, sortOrder: index }));
 }
