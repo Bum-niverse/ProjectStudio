@@ -97,6 +97,12 @@ pub fn run() {
             sql: include_str!("../migrations/0012_user_flow_execution_metadata.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 13,
+            description: "user_flow_node_tombstones",
+            sql: include_str!("../migrations/0013_user_flow_node_tombstones.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

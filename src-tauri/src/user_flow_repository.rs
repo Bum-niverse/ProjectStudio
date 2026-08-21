@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{Connection, Row, SqliteConnection};
+use std::collections::HashSet;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
@@ -129,6 +130,20 @@ fn valid_kind(kind: &str) -> bool {
     matches!(kind, "phase" | "screen" | "action" | "result" | "decision")
 }
 
+async fn tombstoned_node_ids(
+    connection: &mut SqliteConnection,
+    project_id: &str,
+) -> Result<HashSet<String>, String> {
+    sqlx::query_scalar::<_, String>(
+        "SELECT node_id FROM user_flow_node_tombstones WHERE project_id = ?",
+    )
+    .bind(project_id)
+    .fetch_all(connection)
+    .await
+    .map(|ids| ids.into_iter().collect())
+    .map_err(|error| error.to_string())
+}
+
 async fn list_spec(
     connection: &mut SqliteConnection,
     project_id: &str,
@@ -214,6 +229,7 @@ pub async fn initialize_user_flow(
     input: InitializeInput,
 ) -> Result<UserFlowSpec, String> {
     let mut connection = open_database(&app).await?;
+    let tombstoned_ids = tombstoned_node_ids(&mut connection, &input.project_id).await?;
     let mut transaction = connection
         .begin()
         .await
@@ -234,9 +250,17 @@ pub async fn initialize_user_flow(
         if !valid_kind(&node.kind) || node.project_id != input.project_id {
             return Err("유효하지 않은 유저플로우 노드입니다.".to_owned());
         }
+        if tombstoned_ids.contains(&node.id) {
+            continue;
+        }
         sqlx::query("INSERT OR IGNORE INTO user_flow_nodes (id, project_id, lane_id, title, description, kind, position_x, position_y, created_at, updated_at, color_key, depth, parent_id, linked_feature_ids, branch_condition, metadata_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(&node.id).bind(&input.project_id).bind(&node.lane_id).bind(&node.title).bind(&node.description).bind(&node.kind).bind(node.position_x).bind(node.position_y).bind(&input.created_at).bind(&input.created_at).bind(node.color_key.as_deref().unwrap_or("violet")).bind(node.depth).bind(&node.parent_id).bind(serde_json::to_string(&node.linked_feature_ids).map_err(|error|error.to_string())?).bind(&node.branch_condition).bind(metadata(node)?).execute(&mut *transaction).await.map_err(|error|format!("유저플로우 노드를 저장하지 못했습니다: {error}"))?;
     }
     for edge in &input.edges {
+        if tombstoned_ids.contains(&edge.source_node_id)
+            || tombstoned_ids.contains(&edge.target_node_id)
+        {
+            continue;
+        }
         sqlx::query("INSERT OR IGNORE INTO user_flow_edges (id, project_id, source_node_id, target_node_id, created_at) VALUES (?, ?, ?, ?, ?)").bind(&edge.id).bind(&input.project_id).bind(&edge.source_node_id).bind(&edge.target_node_id).bind(&input.created_at).execute(&mut *transaction).await.map_err(|error|format!("유저플로우 연결을 저장하지 못했습니다: {error}"))?;
     }
     transaction
@@ -278,7 +302,21 @@ pub async fn create_user_flow_node(
         return Err("노드 이름과 종류를 확인해 주세요.".to_owned());
     }
     let mut connection = open_database(&app).await?;
-    sqlx::query("INSERT INTO user_flow_nodes (id, project_id, lane_id, title, description, kind, position_x, position_y, created_at, updated_at, color_key, depth, parent_id, linked_feature_ids, branch_condition, metadata_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(&input.node.id).bind(&input.node.project_id).bind(&input.node.lane_id).bind(&input.node.title).bind(&input.node.description).bind(&input.node.kind).bind(input.node.position_x).bind(input.node.position_y).bind(&input.created_at).bind(&input.created_at).bind(input.node.color_key.as_deref().unwrap_or("violet")).bind(input.node.depth).bind(&input.node.parent_id).bind(serde_json::to_string(&input.node.linked_feature_ids).map_err(|error|error.to_string())?).bind(&input.node.branch_condition).bind(metadata(&input.node)?).execute(&mut connection).await.map_err(|error|format!("유저플로우 노드를 추가하지 못했습니다: {error}"))?;
+    let mut transaction = connection
+        .begin()
+        .await
+        .map_err(|error| error.to_string())?;
+    sqlx::query("DELETE FROM user_flow_node_tombstones WHERE project_id=? AND node_id=?")
+        .bind(&input.node.project_id)
+        .bind(&input.node.id)
+        .execute(&mut *transaction)
+        .await
+        .map_err(|error| error.to_string())?;
+    sqlx::query("INSERT INTO user_flow_nodes (id, project_id, lane_id, title, description, kind, position_x, position_y, created_at, updated_at, color_key, depth, parent_id, linked_feature_ids, branch_condition, metadata_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(&input.node.id).bind(&input.node.project_id).bind(&input.node.lane_id).bind(&input.node.title).bind(&input.node.description).bind(&input.node.kind).bind(input.node.position_x).bind(input.node.position_y).bind(&input.created_at).bind(&input.created_at).bind(input.node.color_key.as_deref().unwrap_or("violet")).bind(input.node.depth).bind(&input.node.parent_id).bind(serde_json::to_string(&input.node.linked_feature_ids).map_err(|error|error.to_string())?).bind(&input.node.branch_condition).bind(metadata(&input.node)?).execute(&mut *transaction).await.map_err(|error|format!("유저플로우 노드를 추가하지 못했습니다: {error}"))?;
+    transaction
+        .commit()
+        .await
+        .map_err(|error| error.to_string())?;
     Ok(input.node)
 }
 
@@ -289,15 +327,39 @@ pub async fn delete_user_flow_node(
     node_id: String,
 ) -> Result<(), String> {
     let mut connection = open_database(&app).await?;
+    let mut transaction = connection
+        .begin()
+        .await
+        .map_err(|error| error.to_string())?;
+    let exists: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM user_flow_nodes WHERE id=? AND project_id=?")
+            .bind(&node_id)
+            .bind(&project_id)
+            .fetch_one(&mut *transaction)
+            .await
+            .map_err(|error| error.to_string())?;
+    if exists != 1 {
+        return Err("삭제할 유저플로우 노드를 찾지 못했습니다.".to_owned());
+    }
+    sqlx::query("INSERT OR REPLACE INTO user_flow_node_tombstones (project_id,node_id,deleted_at) VALUES (?,?,strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
+        .bind(&project_id)
+        .bind(&node_id)
+        .execute(&mut *transaction)
+        .await
+        .map_err(|error| format!("유저플로우 삭제 상태를 기록하지 못했습니다: {error}"))?;
     let result = sqlx::query("DELETE FROM user_flow_nodes WHERE id=? AND project_id=?")
-        .bind(node_id)
-        .bind(project_id)
-        .execute(&mut connection)
+        .bind(&node_id)
+        .bind(&project_id)
+        .execute(&mut *transaction)
         .await
         .map_err(|error| format!("유저플로우 노드를 삭제하지 못했습니다: {error}"))?;
     if result.rows_affected() != 1 {
         return Err("삭제할 유저플로우 노드를 찾지 못했습니다.".to_owned());
     }
+    transaction
+        .commit()
+        .await
+        .map_err(|error| error.to_string())?;
     Ok(())
 }
 
@@ -350,7 +412,8 @@ pub async fn connect_user_flow_nodes(
 
 #[cfg(test)]
 mod tests {
-    use super::ExecutionMetadata;
+    use super::{tombstoned_node_ids, ExecutionMetadata};
+    use sqlx::{Connection, SqliteConnection};
 
     #[test]
     fn completion_metadata_defaults_to_incomplete_and_round_trips() {
@@ -364,5 +427,29 @@ mod tests {
         let encoded = serde_json::to_string(&completed).expect("encode metadata");
         let decoded: ExecutionMetadata = serde_json::from_str(&encoded).expect("decode metadata");
         assert!(decoded.is_completed);
+    }
+
+    #[test]
+    fn deleted_generated_nodes_remain_tombstoned() {
+        tauri::async_runtime::block_on(async {
+            let mut connection = SqliteConnection::connect(":memory:")
+                .await
+                .expect("open memory database");
+            sqlx::query("CREATE TABLE user_flow_node_tombstones (project_id TEXT NOT NULL,node_id TEXT NOT NULL,deleted_at TEXT NOT NULL,PRIMARY KEY(project_id,node_id))")
+                .execute(&mut connection)
+                .await
+                .expect("create tombstones");
+            sqlx::query("INSERT INTO user_flow_node_tombstones (project_id,node_id,deleted_at) VALUES ('project','generated-node','now')")
+                .execute(&mut connection)
+                .await
+                .expect("insert tombstone");
+
+            let ids = tombstoned_node_ids(&mut connection, "project")
+                .await
+                .expect("read tombstones");
+
+            assert!(ids.contains("generated-node"));
+            assert!(!ids.contains("other-node"));
+        });
     }
 }
