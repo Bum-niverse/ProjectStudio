@@ -23,12 +23,20 @@ for page in ["src/UserFlowPage.tsx", "src/SystemDesignPage.tsx"]:
     if 'type:"straight"' in source or 'type:"smoothstep"' not in source:
         raise SystemExit(f"{page}의 연결선은 분기 가능한 직교 라우팅을 사용해야 합니다.")
 
+immediate_flow = Path("src/ImmediateReactFlow.tsx").read_text(encoding="utf-8")
+if "nodeDragThreshold={0}" not in immediate_flow or "applyNodeChanges(changes, current)" not in immediate_flow:
+    raise SystemExit("React Flow 노드는 포인터 이동 즉시 드래그를 시작해야 합니다.")
+if "transition-property: box-shadow" not in styles or ".react-flow__edge-path {\n  transition: none;\n}" not in styles:
+    raise SystemExit("노드 좌표와 연결선 경로에는 포인터 추종을 늦추는 CSS 보간을 적용할 수 없습니다.")
+
 system_page = Path("src/SystemDesignPage.tsx").read_text(encoding="utf-8")
 if "key={canvasViewportKey}" not in system_page or "setCanvasFitRevision(current=>current+1)" not in system_page or "onInit={instance=>requestAnimationFrame(()=>requestAnimationFrame" not in system_page:
     raise SystemExit("시스템 설계는 C4 수준·정렬 변경 후 표시 노드에 viewport를 다시 맞춰야 합니다.")
 
 feature_page = Path("src/FeatureMap.tsx").read_text(encoding="utf-8")
 theme_audit = Path("src/theme-audit.css").read_text(encoding="utf-8")
+if "magnetize(" in feature_page or "MAGNET_DISTANCE" in feature_page:
+    raise SystemExit("기능명세 노드는 놓은 좌표에서 자동 스냅되면 안 됩니다.")
 if "idea-driven-colors-v3" not in feature_page:
     raise SystemExit("기능명세 대주제 색상 마이그레이션 버전이 필요합니다.")
 if "onInit={instance=>requestAnimationFrame(()=>requestAnimationFrame" not in feature_page:

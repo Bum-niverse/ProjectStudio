@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Background, Controls, MarkerType, Panel, ReactFlow, type Connection, type Edge, type Node } from "@xyflow/react";
+import { Background, Controls, MarkerType, Panel, type Connection, type Edge, type Node } from "@xyflow/react";
 import { createFeatureRepository } from "./adapters/featureRepository";
 import { createUserFlowRepository } from "./adapters/userFlowRepository";
 import { createDevelopmentFeatureSpec, NODE_COLORS } from "./domain/feature";
 import { connectedUserFlowNodeIds, createExecutionPipelineSpec, createUserFlowSpec, isIncompleteGeneratedFlow, isLegacyPipelineNodeId, reconcileUserFlowLanes, summarizeUserFlowCompletion, type UserFlowNode, type UserFlowNodeKind } from "./domain/userFlow";
 import { isInterfaceProject, type ProjectSubtype, type ProjectType } from "./domain/project";
 import { UserFlowLaneNode, UserFlowNodeCard, type UserFlowNodeData } from "./UserFlowNodeCard";
+import { ImmediateReactFlow as ReactFlow } from "./ImmediateReactFlow";
 
 const nodeTypes={userFlow:UserFlowNodeCard,userFlowLane:UserFlowLaneNode};
 const FLOW_WORKSPACE_HEIGHT=1080;const SHEET_LANE_HEIGHT=760;const OVERVIEW_LANE_HEIGHT=230;const USER_FLOW_LAYOUT_VERSION="swimlane-columns-v9";

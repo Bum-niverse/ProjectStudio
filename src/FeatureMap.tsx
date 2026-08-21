@@ -4,7 +4,6 @@ import {
   Controls,
   MarkerType,
   Panel,
-  ReactFlow,
   type Connection,
   type Edge,
   type Node,
@@ -15,6 +14,7 @@ import { createFeatureRepository } from "./adapters/featureRepository";
 import { FeatureDocumentView } from "./FeatureDocumentView";
 import { FeatureEditor } from "./FeatureDocumentView";
 import { FeatureNodeCard, type FeatureNodeData } from "./FeatureNodeCard";
+import { ImmediateReactFlow as ReactFlow } from "./ImmediateReactFlow";
 import { FeatureProposalPanel } from "./FeatureProposalPanel";
 import { useI18n } from "./i18n";
 
@@ -23,17 +23,11 @@ type WorkspaceViewMode = "document" | ViewMode;
 type LayoutDensity = "default" | "compact";
 type FeatureNode = Node<FeatureNodeData>;
 const nodeTypes = { feature: FeatureNodeCard };
-const MAGNET_DISTANCE = 34;
 const FEATURE_NODE_LAYOUT_VERSION="readable-tree-spacing-v7";
 const FEATURE_BRANCH_COLOR_VERSION="idea-driven-colors-v3";
 const BRANCH_COLORS:NodeColorKey[]=["green","cyan","amber","violet","rose","slate"];
 
 function colorFeatureBranches(features:FeatureSpec[]):FeatureSpec[]{const root=features.find(feature=>!feature.parentId);if(!root)return features;const rootId=root.id;const byId=new Map(features.map(feature=>[feature.id,feature]));const branches=features.filter(feature=>feature.parentId===rootId).sort((a,b)=>a.sortOrder-b.sortOrder);const branchColors=new Map(branches.map((branch,index)=>[branch.id,BRANCH_COLORS[index%BRANCH_COLORS.length]]));function resolve(feature:FeatureSpec):NodeColorKey{let current=feature;while(current.parentId&&current.parentId!==rootId){const parent=byId.get(current.parentId);if(!parent)break;current=parent;}return branchColors.get(current.id)??"slate";}return features.map(feature=>({...feature,colorKey:feature.id===rootId?"slate":resolve(feature)}));}
-
-function magnetize(value: number, candidates: number[]): number {
-  const closest = candidates.reduce((best, candidate) => Math.abs(candidate - value) < Math.abs(best - value) ? candidate : best, value);
-  return Math.abs(closest - value) <= MAGNET_DISTANCE ? closest : value;
-}
 
 interface FeatureMapProps {
   projectId: string;
@@ -165,11 +159,7 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIde
     });});
 
   function handleNodeDragStop(_: MouseEvent | TouchEvent, node: FeatureNode) {
-    const otherNodes = nodes.filter((item) => item.id !== node.id);
-    const position = {
-      x: magnetize(node.position.x, otherNodes.map((item) => item.position.x)),
-      y: magnetize(node.position.y, otherNodes.map((item) => item.position.y)),
-    };
+    const position = node.position;
     setPositionsByMode((current) => {
       const updated = { ...current[mapMode], [node.id]: position };
       void repository.savePosition({ projectId, featureId: node.id, viewMode: mapMode, positionX: position.x, positionY: position.y })
