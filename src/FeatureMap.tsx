@@ -14,6 +14,7 @@ import { createFeatureRepository } from "./adapters/featureRepository";
 import { FeatureDocumentView } from "./FeatureDocumentView";
 import { FeatureEditor } from "./FeatureDocumentView";
 import { FeatureNodeCard, type FeatureNodeData } from "./FeatureNodeCard";
+import { getFeatureCanvasKey, selectFeatureBranch } from "./featureTree";
 import { ImmediateReactFlow as ReactFlow } from "./ImmediateReactFlow";
 import { FeatureProposalPanel } from "./FeatureProposalPanel";
 import { useI18n } from "./i18n";
@@ -34,12 +35,6 @@ interface FeatureMapProps {
   sourceDocumentId: string;
   projectName?: string;
   projectIdea?: string;
-}
-
-function descendantsOf(features:FeatureSpec[],originId:string):FeatureSpec[]{
-  const visible=new Set([originId]);let changed=true;
-  while(changed){changed=false;for(const feature of features){if(feature.parentId&&visible.has(feature.parentId)&&!visible.has(feature.id)){visible.add(feature.id);changed=true;}}}
-  return features.filter(feature=>visible.has(feature.id));
 }
 
 export function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:LayoutDensity="default",rootOverride?:string): FeatureNode[] {
@@ -126,7 +121,7 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIde
   const rootFeature=features.find(feature=>!feature.parentId);
   const completionSummary=useMemo(()=>summarizeFeatureCompletion(features),[features]);
   const majorFeatures=features.filter(feature=>feature.parentId===rootFeature?.id).sort((a,b)=>a.sortOrder-b.sortOrder);
-  const visibleFeatures=useMemo(()=>mode==="tree"&&activeBranchId!=="all"?descendantsOf(features,activeBranchId):features,[activeBranchId,features,mode]);
+  const visibleFeatures=useMemo(()=>mode==="tree"&&activeBranchId!=="all"?selectFeatureBranch(features,activeBranchId):features,[activeBranchId,features,mode]);
   const defaultNodes = useMemo(() => layoutFeatures(visibleFeatures, mapMode,layoutDensity,activeBranchId!=="all"?activeBranchId:undefined), [activeBranchId,layoutDensity,mapMode,visibleFeatures]);
   const [positionsByMode, setPositionsByMode] = useState<Record<ViewMode, Record<string, { x: number; y: number }>>>({ tree: {}, mindmap: {} });
   const [persistenceMessage, setPersistenceMessage] = useState("기능명세를 불러오는 중…");
@@ -233,7 +228,7 @@ export function FeatureMap({ projectId, sourceDocumentId, projectName,projectIde
       </div>
       {!isLoadingFeatures&&mode === "tree"&&<nav aria-label="기능명세 대주제 시트" className="feature-tree-sheet-tabs"><button aria-current={activeBranchId==="all"?"page":undefined} className={activeBranchId==="all"?"selected":""} onClick={()=>setActiveBranchId("all")} type="button">전체 기능</button>{majorFeatures.map(feature=><button aria-current={activeBranchId===feature.id?"page":undefined} className={activeBranchId===feature.id?"selected":""} key={feature.id} onClick={()=>setActiveBranchId(feature.id)} type="button">{feature.title}</button>)}</nav>}
       {isLoadingFeatures ? <p className="feature-loading-state" role="status">기능명세 구조를 불러오는 중입니다.</p> : mode === "document" ? <FeatureDocumentView features={features} onSave={handleSaveFeature} /> : <div className="feature-canvas" data-view-mode={mode}>
-        <ReactFlow nodes={nodes} edges={edges.map(edge=>({...edge,selected:edge.id===edgeMenu?.id}))} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onEdgeClick={(event,edge)=>{event.stopPropagation();const canvas=(event.currentTarget as Element).closest(".feature-canvas")?.getBoundingClientRect();if(canvas)setEdgeMenu({id:edge.id,target:edge.target,x:event.clientX-canvas.left,y:event.clientY-canvas.top});}} onPaneClick={()=>setEdgeMenu(undefined)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.12, duration: 0, maxZoom: 0.9 }} onInit={instance=>requestAnimationFrame(()=>requestAnimationFrame(()=>void instance.fitView({padding:.12,maxZoom:.9,duration:0})))} minZoom={0.12} maxZoom={1.8} panOnScroll proOptions={{hideAttribution:true}}>
+        <ReactFlow key={getFeatureCanvasKey(mapMode,activeBranchId)} nodes={nodes} edges={edges.map(edge=>({...edge,selected:edge.id===edgeMenu?.id}))} nodeTypes={nodeTypes} onConnect={(connection) => void handleConnect(connection)} onEdgeClick={(event,edge)=>{event.stopPropagation();const canvas=(event.currentTarget as Element).closest(".feature-canvas")?.getBoundingClientRect();if(canvas)setEdgeMenu({id:edge.id,target:edge.target,x:event.clientX-canvas.left,y:event.clientY-canvas.top});}} onPaneClick={()=>setEdgeMenu(undefined)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ padding: 0.12, duration: 0, maxZoom: 0.9 }} onInit={instance=>requestAnimationFrame(()=>requestAnimationFrame(()=>void instance.fitView({padding:.12,maxZoom:.9,duration:0})))} minZoom={0.12} maxZoom={1.8} panOnScroll proOptions={{hideAttribution:true}}>
           <Background color="var(--theme-border)" gap={24} size={1} />
           <Controls showInteractive={false} />
           <Panel position="bottom-right"><div className="canvas-layout-controls"><button onClick={()=>handleResetLayout("default")} type="button">기본 정렬</button><button onClick={()=>handleResetLayout("compact")} type="button">좁은 정렬</button></div></Panel>

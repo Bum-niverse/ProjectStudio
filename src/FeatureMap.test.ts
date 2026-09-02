@@ -1,8 +1,24 @@
 import {describe,expect,it} from "vitest";
 import {layoutFeatures} from "./FeatureMap";
 import {createDevelopmentFeatureSpec,summarizeFeatureCompletion} from "./domain/feature";
+import {getFeatureCanvasKey,selectFeatureBranch} from "./featureTree";
 
 describe("feature tree layout",()=>{
+  it("대주제 시트는 해당 가지를 표시하고 전환할 때 캔버스를 다시 맞춘다",()=>{
+    const features=createDevelopmentFeatureSpec("branch-project","업무 기록 도구","기록을 만들고 다시 확인한다.");
+    const root=features.find(feature=>!feature.parentId);
+    const branches=features.filter(feature=>feature.parentId===root?.id);
+    const firstBranch=selectFeatureBranch(features,branches[0].id);
+    const secondBranch=selectFeatureBranch(features,branches[1].id);
+
+    expect(firstBranch[0].id).toBe(branches[0].id);
+    expect(firstBranch.length).toBeGreaterThan(1);
+    expect(secondBranch.length).toBeGreaterThan(1);
+    expect(layoutFeatures(firstBranch,"tree","default",branches[0].id)).toHaveLength(firstBranch.length);
+    expect(getFeatureCanvasKey("tree",branches[0].id)).not.toBe(getFeatureCanvasKey("tree",branches[1].id));
+    expect(getFeatureCanvasKey("mindmap",branches[0].id)).toBe(getFeatureCanvasKey("mindmap",branches[1].id));
+  });
+
   it("기능 완료와 수용 기준 충족을 별도 개발 지표로 계산한다",()=>{
     const features=createDevelopmentFeatureSpec("summary-project","업무 기록 도구","기록을 저장한다.").slice(0,2).map((feature,index)=>({
       ...feature,
