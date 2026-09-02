@@ -24,7 +24,7 @@ type WorkspaceViewMode = "document" | ViewMode;
 type LayoutDensity = "default" | "compact";
 type FeatureNode = Node<FeatureNodeData>;
 const nodeTypes = { feature: FeatureNodeCard };
-const FEATURE_NODE_LAYOUT_VERSION="readable-tree-spacing-v7";
+const FEATURE_NODE_LAYOUT_VERSION="wide-compact-nodes-v8";
 const FEATURE_BRANCH_COLOR_VERSION="idea-driven-colors-v3";
 const BRANCH_COLORS:NodeColorKey[]=["green","cyan","amber","violet","rose","slate"];
 
@@ -72,8 +72,8 @@ export function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:
     const placeTreeNode = (feature: FeatureSpec, depth: number): number => {
       if(feature.parentId===root.id&&nextLeafRow>0)nextLeafRow+=density==="compact"?1:2;
       const children = childrenByParent.get(feature.id) ?? [];
-      const horizontalGap=density==="compact"?330:440;
-      const rowGap=density==="compact"?68:118;
+      const horizontalGap=density==="compact"?380:500;
+      const rowGap=density==="compact"?56:78;
       const y = children.length === 0 ? 50 + nextLeafRow++ * rowGap : children.map((child) => placeTreeNode(child, depth + 1)).reduce((sum, value) => sum + value, 0) / children.length;
       positions.set(feature.id, { x: 30 + depth * horizontalGap, y });
       return y;
@@ -86,7 +86,7 @@ export function layoutFeatures(features: FeatureSpec[], mode: ViewMode, density:
     children.forEach((child) => {
       if (mode === "mindmap") {
         const angle = mindMapAngles.get(child.id) ?? 0;
-        const radius = depth * (density==="compact"?270:320);
+        const radius = depth * (density==="compact"?360:420);
         positions.set(child.id, {
           x: 430 + Math.cos(angle) * radius,
           y: 260 + Math.sin(angle) * radius,

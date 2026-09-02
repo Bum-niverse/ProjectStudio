@@ -41,9 +41,13 @@ describe("feature tree layout",()=>{
     const expandedLeafRows=expanded.filter(node=>!childIds.has(node.id)).map(node=>node.position.y).sort((a,b)=>a-b);
     const compactLeafRows=compact.filter(node=>!childIds.has(node.id)).map(node=>node.position.y).sort((a,b)=>a-b);
     const minimumGap=(rows:number[])=>Math.min(...rows.slice(1).map((value,index)=>value-rows[index]));
-    expect(minimumGap(expandedLeafRows)).toBeGreaterThanOrEqual(118);
-    expect(minimumGap(compactLeafRows)).toBeGreaterThanOrEqual(68);
+    expect(minimumGap(expandedLeafRows)).toBeGreaterThanOrEqual(78);
+    expect(minimumGap(compactLeafRows)).toBeGreaterThanOrEqual(56);
     expect(Math.max(...expanded.map(node=>node.position.x))).toBeGreaterThan(Math.max(...compact.map(node=>node.position.x)));
+    const expandedColumns=[...new Set(expanded.map(node=>node.position.x))].sort((a,b)=>a-b);
+    const compactColumns=[...new Set(compact.map(node=>node.position.x))].sort((a,b)=>a-b);
+    expect(minimumGap(expandedColumns)).toBeGreaterThanOrEqual(500);
+    expect(minimumGap(compactColumns)).toBeGreaterThanOrEqual(380);
   });
 
   it("마인드맵은 루트 주변에 기능을 방사형으로 배치한다",()=>{
